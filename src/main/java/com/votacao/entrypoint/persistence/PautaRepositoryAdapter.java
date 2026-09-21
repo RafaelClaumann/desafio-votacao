@@ -2,6 +2,7 @@ package com.votacao.entrypoint.persistence;
 
 import com.votacao.application.gateway.PautaRepository;
 import com.votacao.application.model.Pauta;
+import com.votacao.entrypoint.persistence.entity.PautaEntity;
 import org.springframework.stereotype.Component;
 
 @Component

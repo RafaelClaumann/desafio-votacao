@@ -1,4 +1,4 @@
-package com.votacao.entrypoint.persistence;
+package com.votacao.entrypoint.persistence.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
