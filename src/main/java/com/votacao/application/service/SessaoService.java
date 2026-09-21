@@ -20,7 +20,9 @@ public class SessaoService {
     }
 
     public Sessao saveSessao(Long pautaId) {
-        Pauta pauta = pautaRepository.findById(pautaId).get();
+        Pauta pauta = pautaRepository.findById(pautaId)
+                .orElseThrow(() -> new IllegalArgumentException("Pauta not found"));
+
         Sessao sessao = new Sessao(null, pauta, LocalDateTime.now(), LocalDateTime.now().plusMinutes(5));
         return sessaoRepository.save(sessao);
     }
