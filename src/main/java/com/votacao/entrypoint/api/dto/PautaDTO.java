@@ -11,7 +11,8 @@ public record PautaDTO(
         String titulo,
 
         @NotNull(message = "O tempo de votação é obrigatório")
-        Long tempoVotacaoMinutos) {
+        Long tempoVotacaoMinutos
+) {
 
     public static PautaDTO fromDomain(Pauta domain) {
         return new PautaDTO(domain.titulo(), domain.tempoVotacaoMinutos());
