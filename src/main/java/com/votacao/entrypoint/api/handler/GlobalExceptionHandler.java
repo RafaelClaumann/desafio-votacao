@@ -1,4 +1,4 @@
-package com.votacao.entrypoint.api;
+package com.votacao.entrypoint.api.handler;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;

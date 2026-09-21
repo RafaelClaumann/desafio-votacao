@@ -1,4 +1,4 @@
-package com.votacao.entrypoint.api;
+package com.votacao.entrypoint.api.handler;
 
 import java.time.Instant;
 import java.util.List;

@@ -2,6 +2,7 @@ package com.votacao.entrypoint.api;
 
 import com.votacao.application.model.Pauta;
 import com.votacao.application.service.PautaService;
+import com.votacao.entrypoint.api.dto.PautaDTO;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;

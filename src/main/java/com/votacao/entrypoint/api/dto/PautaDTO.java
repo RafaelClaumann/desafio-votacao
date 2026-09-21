@@ -1,4 +1,4 @@
-package com.votacao.entrypoint.api;
+package com.votacao.entrypoint.api.dto;
 
 import com.votacao.application.model.Pauta;
 import jakarta.validation.constraints.NotBlank;
