@@ -19,7 +19,7 @@ public class PautaRepositoryAdapter implements PautaRepository {
 
     @Override
     public Pauta save(Pauta pauta) {
-        final PautaEntity pautaEntity = new PautaEntity(pauta.titulo(), pauta.tempoVotacaoMinutos());
+        PautaEntity pautaEntity = PautaEntity.fromDomain(pauta);
         repository.save(pautaEntity);
         return pauta;
     }
