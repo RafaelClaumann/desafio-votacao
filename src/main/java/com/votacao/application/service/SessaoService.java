@@ -29,7 +29,12 @@ public class SessaoService {
             throw new IllegalArgumentException("Sessão already exists for this Pauta");
         }
 
-        Sessao sessao = new Sessao(null, pauta, LocalDateTime.now(), LocalDateTime.now().plusMinutes(5));
+        Sessao sessao = new Sessao(
+                null,
+                pauta,
+                LocalDateTime.now(),
+                LocalDateTime.now().plusMinutes(pauta.tempoVotacaoMinutos())
+        );
         return sessaoRepository.save(sessao);
     }
 
