@@ -21,7 +21,7 @@ public record PautaDTO(
     }
 
     public static Pauta toDomain(PautaDTO dto) {
-        return new Pauta(dto.titulo(), dto.tempoVotacaoMinutos());
+        return new Pauta(null, dto.titulo(), dto.tempoVotacaoMinutos());
     }
 
     public static List<PautaDTO> toDTOList(List<Pauta> pautas) {

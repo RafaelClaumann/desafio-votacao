@@ -19,9 +19,8 @@ public class PautaRepositoryAdapter implements PautaRepository {
 
     @Override
     public Pauta save(Pauta pauta) {
-        PautaEntity pautaEntity = PautaEntity.fromDomain(pauta);
-        repository.save(pautaEntity);
-        return pauta;
+        PautaEntity saved = repository.save(PautaEntity.fromDomain(pauta));
+        return PautaEntity.fromEntity(saved);
     }
 
     @Override

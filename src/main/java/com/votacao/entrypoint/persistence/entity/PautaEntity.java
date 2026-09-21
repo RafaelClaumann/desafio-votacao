@@ -37,7 +37,7 @@ public class PautaEntity {
     }
 
     public static Pauta fromEntity(PautaEntity entity) {
-        return new Pauta(entity.titulo, entity.tempoVotacaoMinutos);
+        return new Pauta(entity.id, entity.titulo, entity.tempoVotacaoMinutos);
     }
 
 }

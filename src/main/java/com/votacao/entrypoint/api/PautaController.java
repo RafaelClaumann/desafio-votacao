@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -27,7 +29,14 @@ public class PautaController {
     public ResponseEntity<PautaDTO> save(@RequestBody @Valid final PautaDTO requestBody) {
         Pauta domain = PautaDTO.toDomain(requestBody);
         Pauta saved = service.savePauta(domain);
-        return ResponseEntity.ok(PautaDTO.fromDomain(saved));
+
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(saved.id())
+                .toUri();
+
+        return ResponseEntity.created(location).body(PautaDTO.fromDomain(saved));
     }
 
     @GetMapping
