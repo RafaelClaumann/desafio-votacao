@@ -7,10 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 
-
-@NoArgsConstructor
 @Getter
 @Entity
 @Table(name = "pautas")
@@ -25,6 +22,9 @@ public class PautaEntity {
 
     @Column(name = "tempo_votacao_segundos", nullable = false)
     private Long tempoVotacaoMinutos = 1L;
+
+    public PautaEntity() {
+    }
 
     public PautaEntity(String titulo, Long tempoVotacaoMinutos) {
         this.titulo = titulo;
