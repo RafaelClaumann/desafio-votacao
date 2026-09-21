@@ -29,11 +29,12 @@ public class SessaoService {
             throw new IllegalArgumentException("Sessão already exists for this Pauta");
         }
 
+        LocalDateTime now = LocalDateTime.now();
         Sessao sessao = new Sessao(
                 null,
                 pauta,
-                LocalDateTime.now(),
-                LocalDateTime.now().plusMinutes(pauta.tempoVotacaoMinutos())
+                now,
+                now.plusMinutes(pauta.tempoVotacaoMinutos())
         );
         return sessaoRepository.save(sessao);
     }
