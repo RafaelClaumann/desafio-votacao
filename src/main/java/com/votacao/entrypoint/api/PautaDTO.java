@@ -1,8 +1,17 @@
 package com.votacao.entrypoint.api;
 
 import com.votacao.application.model.Pauta;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
-public record PautaDTO(String titulo, Long tempoVotacaoMinutos) {
+public record PautaDTO(
+        @NotEmpty
+        @Size(min = 20, max = 150)
+        String titulo,
+
+        @NotNull
+        Long tempoVotacaoMinutos) {
 
     public static PautaDTO fromDomain(Pauta domain) {
         return new PautaDTO(domain.titulo(), domain.tempoVotacaoMinutos());
