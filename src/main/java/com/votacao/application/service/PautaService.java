@@ -13,8 +13,8 @@ public class PautaService {
         this.repository = repository;
     }
 
-    public void savePauta(final Pauta pauta) {
-        repository.save(pauta);
+    public Pauta savePauta(final Pauta pauta) {
+        return repository.save(pauta);
     }
 
 }

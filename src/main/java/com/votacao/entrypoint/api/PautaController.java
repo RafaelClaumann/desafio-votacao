@@ -20,9 +20,9 @@ public class PautaController {
 
     @PostMapping
     public ResponseEntity<PautaDTO> save(@RequestBody final PautaDTO requestBody) {
-        Pauta pauta = new Pauta(requestBody.titulo(), requestBody.tempoVotacaoMinutos());
-        service.savePauta(pauta);
-        return ResponseEntity.ok(requestBody);
+        Pauta domain = PautaDTO.toDomain(requestBody);
+        Pauta saved = service.savePauta(domain);
+        return ResponseEntity.ok(PautaDTO.fromDomain(saved));
     }
 
 }
