@@ -1,5 +1,5 @@
 package com.votacao.entrypoint.api;
 
-public record PautaDTO(String titulo, Long tempoVotacaoSegundos) {
+public record PautaDTO(String titulo, Long tempoVotacaoMinutos) {
 
 }

@@ -20,7 +20,7 @@ public class PautaController {
 
     @PostMapping
     public ResponseEntity<PautaDTO> save(@RequestBody final PautaDTO requestBody) {
-        Pauta pauta = new Pauta(requestBody.titulo(), requestBody.tempoVotacaoSegundos());
+        Pauta pauta = new Pauta(requestBody.titulo(), requestBody.tempoVotacaoMinutos());
         service.savePauta(pauta);
         return ResponseEntity.ok(requestBody);
     }
