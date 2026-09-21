@@ -17,7 +17,8 @@ public class SessaoRepositoryAdapter implements SessaoRepository {
 
     @Override
     public Sessao save(Sessao sessao) {
-        SessaoEntity saved = repository.save(SessaoEntity.fromDomain(sessao));
+        SessaoEntity sessaoEntity = SessaoEntity.fromDomain(sessao);
+        SessaoEntity saved = repository.save(sessaoEntity);
         return SessaoEntity.fromEntity(saved);
     }
 

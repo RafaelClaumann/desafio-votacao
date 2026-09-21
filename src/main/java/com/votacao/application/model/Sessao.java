@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 
 public record Sessao(
         Long id,
-        Long pautaId,
+        Pauta pauta,
         LocalDateTime startedAt,
         LocalDateTime expiresAt
 ) {

@@ -37,6 +37,7 @@ public class SessaoEntity {
         SessaoEntity entity = new SessaoEntity();
 
         entity.id = sessao.id();
+        entity.pauta = PautaEntity.fromDomain(sessao.pauta());
         entity.startedAt = sessao.startedAt();
         entity.expiresAt = sessao.expiresAt();
 
@@ -44,7 +45,7 @@ public class SessaoEntity {
     }
 
     public static Sessao fromEntity(SessaoEntity entity) {
-        return new Sessao(entity.id, null, entity.startedAt, entity.expiresAt);
+        return new Sessao(entity.id, PautaEntity.fromEntity(entity.pauta), entity.startedAt, entity.expiresAt);
     }
 
 }

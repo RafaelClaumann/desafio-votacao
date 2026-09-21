@@ -11,8 +11,4 @@ public record SessaoDTO(
 
     }
 
-    public static Sessao toDomain(SessaoDTO requestBody) {
-        return new Sessao(null, null, null, null);
-    }
-
 }
