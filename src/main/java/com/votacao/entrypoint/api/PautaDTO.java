@@ -1,16 +1,16 @@
 package com.votacao.entrypoint.api;
 
 import com.votacao.application.model.Pauta;
-import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record PautaDTO(
-        @NotEmpty
         @Size(min = 20, max = 150)
+        @NotBlank(message = "O título é obrigatório")
         String titulo,
 
-        @NotNull
+        @NotNull(message = "O tempo de votação é obrigatório")
         Long tempoVotacaoMinutos) {
 
     public static PautaDTO fromDomain(Pauta domain) {
