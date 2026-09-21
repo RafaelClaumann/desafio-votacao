@@ -3,6 +3,7 @@ package com.votacao.application.gateway;
 import com.votacao.application.model.Pauta;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface PautaRepository {
 
@@ -10,6 +11,6 @@ public interface PautaRepository {
 
     List<Pauta> getPautas();
 
-    Pauta findById(Long pautaId);
+    Optional<Pauta> findById(Long pautaId);
 
 }
