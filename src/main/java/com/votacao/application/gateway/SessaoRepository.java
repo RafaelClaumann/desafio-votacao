@@ -6,4 +6,6 @@ public interface SessaoRepository {
 
     Sessao save(Sessao sessao);
 
+    boolean existsByPautaId(Long pautaId);
+
 }

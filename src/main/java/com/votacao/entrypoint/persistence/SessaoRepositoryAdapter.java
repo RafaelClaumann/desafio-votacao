@@ -22,4 +22,9 @@ public class SessaoRepositoryAdapter implements SessaoRepository {
         return SessaoEntity.fromEntity(saved);
     }
 
+    @Override
+    public boolean existsByPautaId(Long pautaId) {
+        return repository.existsByPautaId(pautaId);
+    }
+
 }
