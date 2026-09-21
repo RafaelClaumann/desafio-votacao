@@ -10,4 +10,6 @@ public interface PautaRepository {
 
     List<Pauta> getPautas();
 
+    Pauta findById(Long pautaId);
+
 }

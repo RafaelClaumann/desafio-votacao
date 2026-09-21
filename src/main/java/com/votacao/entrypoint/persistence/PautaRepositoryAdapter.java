@@ -29,4 +29,9 @@ public class PautaRepositoryAdapter implements PautaRepository {
         return entities.stream().map(PautaEntity::fromEntity).toList();
     }
 
+    @Override
+    public Pauta findById(Long pautaId) {
+        return repository.findById(pautaId).map(PautaEntity::fromEntity).orElse(null);
+    }
+
 }

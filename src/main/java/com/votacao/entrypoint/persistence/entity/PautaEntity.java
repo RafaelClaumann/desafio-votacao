@@ -33,7 +33,11 @@ public class PautaEntity {
     }
 
     public static PautaEntity fromDomain(Pauta domain) {
-        return new PautaEntity(domain.titulo(), domain.tempoVotacaoMinutos());
+        PautaEntity pautaEntity = new PautaEntity();
+        pautaEntity.id = domain.id();
+        pautaEntity.titulo = domain.titulo();
+        pautaEntity.tempoVotacaoMinutos = domain.tempoVotacaoMinutos();
+        return pautaEntity;
     }
 
     public static Pauta fromEntity(PautaEntity entity) {
