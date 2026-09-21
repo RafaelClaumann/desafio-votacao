@@ -4,6 +4,8 @@ import com.votacao.application.gateway.PautaRepository;
 import com.votacao.application.model.Pauta;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class PautaService {
 
@@ -15,6 +17,10 @@ public class PautaService {
 
     public Pauta savePauta(final Pauta pauta) {
         return repository.save(pauta);
+    }
+
+    public List<Pauta> getPautas() {
+        return repository.getPautas();
     }
 
 }

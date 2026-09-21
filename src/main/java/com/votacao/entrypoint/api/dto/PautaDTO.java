@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import java.util.List;
+
 public record PautaDTO(
         @Size(min = 20, max = 150)
         @NotBlank(message = "O título é obrigatório")
@@ -20,6 +22,10 @@ public record PautaDTO(
 
     public static Pauta toDomain(PautaDTO dto) {
         return new Pauta(dto.titulo(), dto.tempoVotacaoMinutos());
+    }
+
+    public static List<PautaDTO> toDTOList(List<Pauta> pautas) {
+        return pautas.stream().map(PautaDTO::fromDomain).toList();
     }
 
 }
