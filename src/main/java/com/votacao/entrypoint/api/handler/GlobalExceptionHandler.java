@@ -1,5 +1,6 @@
 package com.votacao.entrypoint.api.handler;
 
+import com.votacao.application.model.DuplicatedVoteException;
 import com.votacao.application.model.SessaoIsClosedException;
 import com.votacao.application.model.SessaoNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,6 +36,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(SessaoIsClosedException.class)
     public ResponseEntity<ApiError> handleSessaoIsClosed(SessaoIsClosedException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(DuplicatedVoteException.class)
+    public ResponseEntity<ApiError> handleDuplicatedVote(DuplicatedVoteException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(Exception.class)

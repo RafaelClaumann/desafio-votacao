@@ -1,6 +1,7 @@
 package com.votacao.application.service;
 
 import com.votacao.application.gateway.VotoRepository;
+import com.votacao.application.model.DuplicatedVoteException;
 import com.votacao.application.model.Sessao;
 import com.votacao.application.model.Voto;
 import org.springframework.stereotype.Service;
@@ -17,15 +18,13 @@ public class VotoService {
     }
 
     public Voto votar(Long idSessao, String documento, String escolhaVoto) {
+        Sessao sessao = sessaoService.getOpenSessaoById(idSessao);
 
-        Voto voto = null;
-        try {
-            Sessao openSessaoById = sessaoService.getOpenSessaoById(idSessao);
-            voto = new Voto(null, openSessaoById, documento, Voto.Escolha.valueOf(escolhaVoto));
-        } catch (Exception e) {
-            throw new IllegalStateException("Sessão is closed or not found");
+        if (votoRepository.existsBySessaoIdAndDocumento(idSessao, documento)) {
+            throw new DuplicatedVoteException(idSessao, documento);
         }
 
+        Voto voto = new Voto(null, sessao, documento, Voto.Escolha.valueOf(escolhaVoto));
         return votoRepository.save(voto);
     }
 
