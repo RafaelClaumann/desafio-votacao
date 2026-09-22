@@ -1,5 +1,9 @@
 package com.votacao.entrypoint.api.handler;
 
+import com.votacao.application.model.exception.DuplicatedVoteException;
+import com.votacao.application.model.exception.PautaNotFoundException;
+import com.votacao.application.model.exception.SessaoIsClosedException;
+import com.votacao.application.model.exception.SessaoNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +27,26 @@ public class GlobalExceptionHandler {
                 .map(f -> new ApiError.FieldError(f.getField(), f.getDefaultMessage()))
                 .toList();
         return buildResponse(HttpStatus.BAD_REQUEST, "Erro de validação", request, fields);
+    }
+
+    @ExceptionHandler(SessaoNotFoundException.class)
+    public ResponseEntity<ApiError> handleSessaoNotFound(SessaoNotFoundException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(SessaoIsClosedException.class)
+    public ResponseEntity<ApiError> handleSessaoIsClosed(SessaoIsClosedException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(DuplicatedVoteException.class)
+    public ResponseEntity<ApiError> handleDuplicatedVote(DuplicatedVoteException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(PautaNotFoundException.class)
+    public ResponseEntity<ApiError> handlePautaNotFound(PautaNotFoundException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(Exception.class)

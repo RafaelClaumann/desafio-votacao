@@ -1,9 +1,10 @@
 package com.votacao.application.service;
 
-import com.votacao.application.gateway.PautaRepository;
 import com.votacao.application.gateway.SessaoRepository;
 import com.votacao.application.model.Pauta;
 import com.votacao.application.model.Sessao;
+import com.votacao.application.model.exception.SessaoIsClosedException;
+import com.votacao.application.model.exception.SessaoNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,17 +15,16 @@ import java.util.List;
 public class SessaoService {
 
     private final SessaoRepository sessaoRepository;
-    private final PautaRepository pautaRepository;
+    private final PautaService pautaService;
 
-    public SessaoService(SessaoRepository sessaoRepository, PautaRepository pautaRepository) {
+    public SessaoService(SessaoRepository sessaoRepository, PautaService pautaService) {
         this.sessaoRepository = sessaoRepository;
-        this.pautaRepository = pautaRepository;
+        this.pautaService = pautaService;
     }
 
     @Transactional
     public Sessao saveSessao(Long pautaId) {
-        Pauta pauta = pautaRepository.findById(pautaId)
-                .orElseThrow(() -> new IllegalArgumentException("Pauta not found"));
+        Pauta pauta = pautaService.getPautaById(pautaId);
 
         if (sessaoRepository.existsByPautaId(pautaId)) {
             throw new IllegalArgumentException("Sessão already exists for this Pauta");
@@ -46,10 +46,11 @@ public class SessaoService {
 
     public Sessao getOpenSessaoById(Long sessaoId) {
         Sessao sessao = sessaoRepository.findById(sessaoId)
-                .orElseThrow(() -> new IllegalArgumentException("Sessão not found"));
+                .orElseThrow(() -> new SessaoNotFoundException(sessaoId));
 
-        if (!sessao.isOpen()) {
-            throw new IllegalStateException("Sessão is closed");
+        LocalDateTime now = LocalDateTime.now();
+        if (!sessao.isOpen(now)) {
+            throw new SessaoIsClosedException(sessaoId);
         }
 
         return sessao;
