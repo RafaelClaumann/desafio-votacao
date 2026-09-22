@@ -5,6 +5,7 @@ import com.votacao.application.model.DuplicatedVoteException;
 import com.votacao.application.model.Sessao;
 import com.votacao.application.model.Voto;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class VotoService {
@@ -17,6 +18,7 @@ public class VotoService {
         this.sessaoService = sessaoService;
     }
 
+    @Transactional
     public Voto votar(Long idSessao, String documento, String escolhaVoto) {
         Sessao sessao = sessaoService.getOpenSessaoById(idSessao);
 
