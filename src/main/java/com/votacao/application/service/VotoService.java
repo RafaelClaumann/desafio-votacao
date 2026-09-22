@@ -33,6 +33,7 @@ public class VotoService {
 
     public ResultadoVotosSessao apurarVotosSessao(Long idSessao) {
         return new ResultadoVotosSessao(
+                idSessao,
                 votoRepository.countBySessaoIdAndEscolha(idSessao, Voto.Escolha.SIM),
                 votoRepository.countBySessaoIdAndEscolha(idSessao, Voto.Escolha.NAO)
         );
