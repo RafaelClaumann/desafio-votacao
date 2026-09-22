@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 public class SessaoService {
@@ -37,6 +38,10 @@ public class SessaoService {
                 now.plusMinutes(pauta.tempoVotacaoMinutos())
         );
         return sessaoRepository.save(sessao);
+    }
+
+    public List<Sessao> getSessoes() {
+        return sessaoRepository.findAll();
     }
 
 }

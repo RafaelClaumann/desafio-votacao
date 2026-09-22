@@ -6,6 +6,8 @@ import com.votacao.entrypoint.persistence.entity.SessaoEntity;
 import com.votacao.entrypoint.persistence.jpa.SpringDataSessaoRepository;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 public class SessaoRepositoryAdapter implements SessaoRepository {
 
@@ -25,6 +27,11 @@ public class SessaoRepositoryAdapter implements SessaoRepository {
     @Override
     public boolean existsByPautaId(Long pautaId) {
         return repository.existsByPautaId(pautaId);
+    }
+
+    @Override
+    public List<Sessao> findAll() {
+        return repository.findAll().stream().map(SessaoEntity::fromEntity).toList();
     }
 
 }
