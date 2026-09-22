@@ -1,8 +1,8 @@
 package com.votacao.entrypoint.persistence;
 
 import com.votacao.application.gateway.VotoRepository;
-import com.votacao.application.model.exception.DuplicatedVoteException;
 import com.votacao.application.model.Voto;
+import com.votacao.application.model.exception.DuplicatedVoteException;
 import com.votacao.entrypoint.persistence.entity.VotoEntity;
 import com.votacao.entrypoint.persistence.jpa.SpringDataVotoRepository;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -31,6 +31,12 @@ public class VotoRepositoryAdapter implements VotoRepository {
     @Override
     public boolean existsBySessaoIdAndDocumento(Long idSessao, String cpf) {
         return repository.existsBySessaoIdAndDocumento(idSessao, cpf);
+    }
+
+    @Override
+    public long countBySessaoIdAndEscolha(Long sessaoId, Voto.Escolha escolha) {
+        VotoEntity.EscolhaVoto escolhaVoto = VotoEntity.EscolhaVoto.valueOf(escolha.name());
+        return repository.countBySessaoIdAndEscolhaVoto(sessaoId, escolhaVoto);
     }
 
 }

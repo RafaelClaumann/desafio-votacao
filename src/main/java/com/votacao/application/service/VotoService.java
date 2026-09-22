@@ -1,9 +1,10 @@
 package com.votacao.application.service;
 
 import com.votacao.application.gateway.VotoRepository;
-import com.votacao.application.model.exception.DuplicatedVoteException;
 import com.votacao.application.model.Sessao;
 import com.votacao.application.model.Voto;
+import com.votacao.application.model.exception.DuplicatedVoteException;
+import com.votacao.application.service.query.ResultadoVotosSessao;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +29,13 @@ public class VotoService {
 
         Voto voto = new Voto(null, sessao, documento, Voto.Escolha.valueOf(escolhaVoto));
         return votoRepository.save(voto);
+    }
+
+    public ResultadoVotosSessao apurarVotosSessao(Long idSessao) {
+        return new ResultadoVotosSessao(
+                votoRepository.countBySessaoIdAndEscolha(idSessao, Voto.Escolha.SIM),
+                votoRepository.countBySessaoIdAndEscolha(idSessao, Voto.Escolha.NAO)
+        );
     }
 
 }
