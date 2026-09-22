@@ -6,6 +6,6 @@ public interface VotoRepository {
 
     Voto save(Voto voto);
 
-    boolean existsBySessaoIdAndCpf(Long idSessao, String cpf);
+    boolean existsBySessaoIdAndDocumento(Long idSessao, String cpf);
 
 }
