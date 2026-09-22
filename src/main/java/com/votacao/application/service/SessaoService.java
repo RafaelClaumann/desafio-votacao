@@ -4,6 +4,7 @@ import com.votacao.application.gateway.SessaoRepository;
 import com.votacao.application.model.Pauta;
 import com.votacao.application.model.Sessao;
 import com.votacao.application.model.exception.SessaoIsClosedException;
+import com.votacao.application.model.exception.SessaoIsOpenException;
 import com.votacao.application.model.exception.SessaoNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,7 +63,7 @@ public class SessaoService {
 
         LocalDateTime now = LocalDateTime.now();
         if (sessao.isOpen(now)) {
-            throw new IllegalStateException("sessaoId");
+            throw new SessaoIsOpenException(sessaoId);
         }
 
         return sessao;
