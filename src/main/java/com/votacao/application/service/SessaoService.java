@@ -16,9 +16,9 @@ public class SessaoService {
     private final SessaoRepository sessaoRepository;
     private final PautaRepository pautaRepository;
 
-    public SessaoService(SessaoRepository sessaoRepository, PautaRepository pautaRepository1) {
+    public SessaoService(SessaoRepository sessaoRepository, PautaRepository pautaRepository) {
         this.sessaoRepository = sessaoRepository;
-        this.pautaRepository = pautaRepository1;
+        this.pautaRepository = pautaRepository;
     }
 
     @Transactional
