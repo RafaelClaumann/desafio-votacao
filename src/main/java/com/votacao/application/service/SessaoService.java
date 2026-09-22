@@ -4,6 +4,7 @@ import com.votacao.application.gateway.PautaRepository;
 import com.votacao.application.gateway.SessaoRepository;
 import com.votacao.application.model.Pauta;
 import com.votacao.application.model.Sessao;
+import com.votacao.application.model.SessaoNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,7 +47,7 @@ public class SessaoService {
 
     public Sessao getOpenSessaoById(Long sessaoId) {
         Sessao sessao = sessaoRepository.findById(sessaoId)
-                .orElseThrow(() -> new IllegalArgumentException("Sessão not found"));
+                .orElseThrow(() -> new SessaoNotFoundException(sessaoId));
 
         if (!sessao.isOpen()) {
             throw new IllegalStateException("Sessão is closed");
