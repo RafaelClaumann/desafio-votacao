@@ -3,6 +3,7 @@ package com.votacao.application.gateway;
 import com.votacao.application.model.Sessao;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface SessaoRepository {
 
@@ -11,5 +12,7 @@ public interface SessaoRepository {
     boolean existsByPautaId(Long pautaId);
 
     List<Sessao> findAll();
+
+    Optional<Sessao> findById(Long sessaoId);
 
 }

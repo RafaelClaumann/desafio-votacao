@@ -16,9 +16,9 @@ public class SessaoService {
     private final SessaoRepository sessaoRepository;
     private final PautaRepository pautaRepository;
 
-    public SessaoService(SessaoRepository sessaoRepository, PautaRepository pautaRepository1) {
+    public SessaoService(SessaoRepository sessaoRepository, PautaRepository pautaRepository) {
         this.sessaoRepository = sessaoRepository;
-        this.pautaRepository = pautaRepository1;
+        this.pautaRepository = pautaRepository;
     }
 
     @Transactional
@@ -42,6 +42,17 @@ public class SessaoService {
 
     public List<Sessao> getSessoes() {
         return sessaoRepository.findAll();
+    }
+
+    public Sessao getOpenSessaoById(Long sessaoId) {
+        Sessao sessao = sessaoRepository.findById(sessaoId)
+                .orElseThrow(() -> new IllegalArgumentException("Sessão not found"));
+
+        if (!sessao.isOpen()) {
+            throw new IllegalStateException("Sessão is closed");
+        }
+
+        return sessao;
     }
 
 }
