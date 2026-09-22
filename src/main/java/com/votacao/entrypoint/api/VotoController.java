@@ -3,6 +3,7 @@ package com.votacao.entrypoint.api;
 import com.votacao.application.model.Voto;
 import com.votacao.application.service.VotoService;
 import com.votacao.entrypoint.api.dto.VotoDTO;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,7 +24,7 @@ public class VotoController {
     }
 
     @PostMapping
-    public ResponseEntity<VotoDTO> save(@RequestBody final VotoDTO requestBody) {
+    public ResponseEntity<VotoDTO> save(@RequestBody @Valid final VotoDTO requestBody) {
         Voto saved = service.votar(
                 requestBody.idSessao(),
                 requestBody.documento(),
