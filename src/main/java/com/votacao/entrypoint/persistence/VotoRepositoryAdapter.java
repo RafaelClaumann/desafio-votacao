@@ -1,7 +1,7 @@
 package com.votacao.entrypoint.persistence;
 
 import com.votacao.application.gateway.VotoRepository;
-import com.votacao.application.model.DuplicatedVoteException;
+import com.votacao.application.model.exception.DuplicatedVoteException;
 import com.votacao.application.model.Voto;
 import com.votacao.entrypoint.persistence.entity.VotoEntity;
 import com.votacao.entrypoint.persistence.jpa.SpringDataVotoRepository;

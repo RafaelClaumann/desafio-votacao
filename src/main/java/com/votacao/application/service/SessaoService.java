@@ -3,8 +3,8 @@ package com.votacao.application.service;
 import com.votacao.application.gateway.SessaoRepository;
 import com.votacao.application.model.Pauta;
 import com.votacao.application.model.Sessao;
-import com.votacao.application.model.SessaoIsClosedException;
-import com.votacao.application.model.SessaoNotFoundException;
+import com.votacao.application.model.exception.SessaoIsClosedException;
+import com.votacao.application.model.exception.SessaoNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

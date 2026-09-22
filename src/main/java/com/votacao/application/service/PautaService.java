@@ -2,7 +2,7 @@ package com.votacao.application.service;
 
 import com.votacao.application.gateway.PautaRepository;
 import com.votacao.application.model.Pauta;
-import com.votacao.application.model.PautaNotFoundException;
+import com.votacao.application.model.exception.PautaNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

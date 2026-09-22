@@ -1,9 +1,9 @@
 package com.votacao.entrypoint.api.handler;
 
-import com.votacao.application.model.DuplicatedVoteException;
-import com.votacao.application.model.PautaNotFoundException;
-import com.votacao.application.model.SessaoIsClosedException;
-import com.votacao.application.model.SessaoNotFoundException;
+import com.votacao.application.model.exception.DuplicatedVoteException;
+import com.votacao.application.model.exception.PautaNotFoundException;
+import com.votacao.application.model.exception.SessaoIsClosedException;
+import com.votacao.application.model.exception.SessaoNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

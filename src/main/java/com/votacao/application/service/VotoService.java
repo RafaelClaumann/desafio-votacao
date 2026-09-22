@@ -1,7 +1,7 @@
 package com.votacao.application.service;
 
 import com.votacao.application.gateway.VotoRepository;
-import com.votacao.application.model.DuplicatedVoteException;
+import com.votacao.application.model.exception.DuplicatedVoteException;
 import com.votacao.application.model.Sessao;
 import com.votacao.application.model.Voto;
 import org.springframework.stereotype.Service;

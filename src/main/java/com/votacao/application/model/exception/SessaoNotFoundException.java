@@ -1,4 +1,4 @@
-package com.votacao.application.model;
+package com.votacao.application.model.exception;
 
 public class SessaoNotFoundException extends RuntimeException {
 
