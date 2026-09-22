@@ -4,6 +4,7 @@ import com.votacao.application.model.Sessao;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface SessaoRepository {
 
@@ -14,5 +15,7 @@ public interface SessaoRepository {
     List<Sessao> findAll();
 
     Optional<Sessao> findById(Long sessaoId);
+
+    Set<Long> findPautaIdsComSessao(List<Long> pautaIds);
 
 }
