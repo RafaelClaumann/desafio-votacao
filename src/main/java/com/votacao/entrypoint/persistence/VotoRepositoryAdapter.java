@@ -22,4 +22,9 @@ public class VotoRepositoryAdapter implements VotoRepository {
         return VotoEntity.fromEntity(saved);
     }
 
+    @Override
+    public boolean existsBySessaoIdAndCpf(Long idSessao, String cpf) {
+        return repository.existsBySessaoIdAndCpf(idSessao, cpf);
+    }
+
 }
