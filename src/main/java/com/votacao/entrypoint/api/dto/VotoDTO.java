@@ -10,7 +10,7 @@ public record VotoDTO(
         @NotNull(message = "O id da Sessão é obrigatório")
         Long idSessao,
 
-        @CPF
+        // @CPF
         @NotBlank(message = "O documento é obrigatório")
         String documento,
 
