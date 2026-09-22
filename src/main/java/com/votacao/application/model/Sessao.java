@@ -9,8 +9,8 @@ public record Sessao(
         LocalDateTime expiresAt
 ) {
 
-    public boolean isOpen() {
-        return expiresAt != null && LocalDateTime.now().isBefore(expiresAt);
+    public boolean isOpen(LocalDateTime now) {
+        return expiresAt != null && now.isBefore(expiresAt);
     }
 
 }

@@ -50,7 +50,8 @@ public class SessaoService {
         Sessao sessao = sessaoRepository.findById(sessaoId)
                 .orElseThrow(() -> new SessaoNotFoundException(sessaoId));
 
-        if (!sessao.isOpen()) {
+        LocalDateTime now = LocalDateTime.now();
+        if (!sessao.isOpen(now)) {
             throw new SessaoIsClosedException(sessaoId);
         }
 
