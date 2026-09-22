@@ -56,4 +56,16 @@ public class SessaoService {
         return sessao;
     }
 
+    public Sessao getClosedSessaoById(Long sessaoId) {
+        Sessao sessao = sessaoRepository.findById(sessaoId)
+                .orElseThrow(() -> new SessaoNotFoundException(sessaoId));
+
+        LocalDateTime now = LocalDateTime.now();
+        if (sessao.isOpen(now)) {
+            throw new IllegalStateException("sessaoId");
+        }
+
+        return sessao;
+    }
+
 }

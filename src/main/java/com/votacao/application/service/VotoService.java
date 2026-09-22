@@ -32,6 +32,7 @@ public class VotoService {
     }
 
     public ResultadoVotosSessao apurarVotosSessao(Long idSessao) {
+        sessaoService.getClosedSessaoById(idSessao);
         return new ResultadoVotosSessao(
                 idSessao,
                 votoRepository.countBySessaoIdAndEscolha(idSessao, Voto.Escolha.SIM),
