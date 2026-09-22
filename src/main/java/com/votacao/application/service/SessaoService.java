@@ -48,7 +48,7 @@ public class SessaoService {
         Sessao sessao = sessaoRepository.findById(sessaoId)
                 .orElseThrow(() -> new IllegalArgumentException("Sessão not found"));
 
-        if (LocalDateTime.now().isAfter(sessao.expiresAt())) {
+        if (!sessao.isOpen()) {
             throw new IllegalStateException("Sessão is closed");
         }
 
