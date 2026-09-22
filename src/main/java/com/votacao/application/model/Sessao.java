@@ -10,7 +10,7 @@ public record Sessao(
 ) {
 
     public boolean isOpen() {
-        return LocalDateTime.now().isBefore(expiresAt);
+        return expiresAt != null && LocalDateTime.now().isBefore(expiresAt);
     }
 
 }

@@ -4,6 +4,7 @@ import com.votacao.application.gateway.PautaRepository;
 import com.votacao.application.gateway.SessaoRepository;
 import com.votacao.application.model.Pauta;
 import com.votacao.application.model.Sessao;
+import com.votacao.application.model.SessaoIsClosedException;
 import com.votacao.application.model.SessaoNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,7 +51,7 @@ public class SessaoService {
                 .orElseThrow(() -> new SessaoNotFoundException(sessaoId));
 
         if (!sessao.isOpen()) {
-            throw new IllegalStateException("Sessão is closed");
+            throw new SessaoIsClosedException(sessaoId);
         }
 
         return sessao;
