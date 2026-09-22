@@ -44,4 +44,15 @@ public class SessaoService {
         return sessaoRepository.findAll();
     }
 
+    public Sessao getOpenSessaoById(Long sessaoId) {
+        Sessao sessao = sessaoRepository.findById(sessaoId)
+                .orElseThrow(() -> new IllegalArgumentException("Sessão not found"));
+
+        if (LocalDateTime.now().isAfter(sessao.expiresAt())) {
+            throw new IllegalStateException("Sessão is closed");
+        }
+
+        return sessao;
+    }
+
 }

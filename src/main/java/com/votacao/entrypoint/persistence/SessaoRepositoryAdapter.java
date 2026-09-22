@@ -7,6 +7,7 @@ import com.votacao.entrypoint.persistence.jpa.SpringDataSessaoRepository;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Optional;
 
 @Component
 public class SessaoRepositoryAdapter implements SessaoRepository {
@@ -32,6 +33,11 @@ public class SessaoRepositoryAdapter implements SessaoRepository {
     @Override
     public List<Sessao> findAll() {
         return repository.findAll().stream().map(SessaoEntity::fromEntity).toList();
+    }
+
+    @Override
+    public Optional<Sessao> findById(Long sessaoId) {
+        return repository.findById(sessaoId).map(SessaoEntity::fromEntity);
     }
 
 }
