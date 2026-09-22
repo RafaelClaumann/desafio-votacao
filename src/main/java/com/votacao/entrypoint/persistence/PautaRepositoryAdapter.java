@@ -7,6 +7,7 @@ import com.votacao.entrypoint.persistence.jpa.SpringDataPautaRepository;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Optional;
 
 @Component
 public class PautaRepositoryAdapter implements PautaRepository {
@@ -27,6 +28,11 @@ public class PautaRepositoryAdapter implements PautaRepository {
     public List<Pauta> getPautas() {
         final List<PautaEntity> entities = repository.findAll();
         return entities.stream().map(PautaEntity::fromEntity).toList();
+    }
+
+    @Override
+    public Optional<Pauta> findById(Long pautaId) {
+        return repository.findById(pautaId).map(PautaEntity::fromEntity);
     }
 
 }
