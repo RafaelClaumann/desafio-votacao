@@ -3,6 +3,7 @@ package com.votacao.entrypoint.api.handler;
 import com.votacao.application.model.exception.DuplicatedVoteException;
 import com.votacao.application.model.exception.PautaNotFoundException;
 import com.votacao.application.model.exception.SessaoIsClosedException;
+import com.votacao.application.model.exception.SessaoIsOpenException;
 import com.votacao.application.model.exception.SessaoNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -36,6 +37,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(SessaoIsClosedException.class)
     public ResponseEntity<ApiError> handleSessaoIsClosed(SessaoIsClosedException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(SessaoIsOpenException.class)
+    public ResponseEntity<ApiError> handleSessaoIsOpen(SessaoIsOpenException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
     }
 

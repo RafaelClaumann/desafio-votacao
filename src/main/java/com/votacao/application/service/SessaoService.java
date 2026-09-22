@@ -4,6 +4,7 @@ import com.votacao.application.gateway.SessaoRepository;
 import com.votacao.application.model.Pauta;
 import com.votacao.application.model.Sessao;
 import com.votacao.application.model.exception.SessaoIsClosedException;
+import com.votacao.application.model.exception.SessaoIsOpenException;
 import com.votacao.application.model.exception.SessaoNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,6 +52,18 @@ public class SessaoService {
         LocalDateTime now = LocalDateTime.now();
         if (!sessao.isOpen(now)) {
             throw new SessaoIsClosedException(sessaoId);
+        }
+
+        return sessao;
+    }
+
+    public Sessao getClosedSessaoById(Long sessaoId) {
+        Sessao sessao = sessaoRepository.findById(sessaoId)
+                .orElseThrow(() -> new SessaoNotFoundException(sessaoId));
+
+        LocalDateTime now = LocalDateTime.now();
+        if (sessao.isOpen(now)) {
+            throw new SessaoIsOpenException(sessaoId);
         }
 
         return sessao;

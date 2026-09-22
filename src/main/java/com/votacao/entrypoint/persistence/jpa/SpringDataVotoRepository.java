@@ -7,4 +7,6 @@ public interface SpringDataVotoRepository extends JpaRepository<VotoEntity, Long
 
     boolean existsBySessaoIdAndDocumento(Long idSessao, String cpf);
 
+    long countBySessaoIdAndEscolhaVoto(Long idSessao, VotoEntity.EscolhaVoto escolha);
+
 }

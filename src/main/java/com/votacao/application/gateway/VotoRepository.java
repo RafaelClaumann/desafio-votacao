@@ -8,4 +8,6 @@ public interface VotoRepository {
 
     boolean existsBySessaoIdAndDocumento(Long idSessao, String cpf);
 
+    long countBySessaoIdAndEscolha(Long sessaoId, Voto.Escolha escolha);
+
 }
