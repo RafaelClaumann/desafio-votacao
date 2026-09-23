@@ -9,43 +9,45 @@ Legenda de impacto: **Alta** (regra de negócio burlável ou falha comum com efe
 
 ---
 
-## PF1 — Duração de votação sem validação de positividade ("sessão com tempo negativo")
+## PF1 — (RESOLVIDO) Duração de votação sem validação de positividade ("sessão com tempo negativo")
 
-**Gatilho**
+**Status: corrigido** — `PautaRequestDTO.tempoVotacaoMinutos` agora exige valor **maior que zero**
+(`@Positive`, junto do `@NotNull`).
 
-Uma pauta é criada com `tempo_votacao_minutos` igual a `0` ou negativo. A entrada aceita esses
-valores porque há apenas `@NotNull` — não existe `@Min`/`@Positive`.
+**Comportamento anterior**
 
-**O que acontece**
+Uma pauta era criada com `tempo_votacao_minutos` igual a `0` ou negativo, pois a entrada tinha
+apenas `@NotNull` — não existia `@Min`/`@Positive`. As consequências eram:
 
-- A sessão é criada com `expiração = agora + duração`. Com `0`, a expiração é igual ao início;
+- A sessão era criada com `expiração = agora + duração`. Com `0`, a expiração é igual ao início;
   com valor negativo, é anterior ao início.
 - Como a sessão só está aberta enquanto `agora < expiração` (strictamente), uma sessão com
-  duração 0 ou negativa **nasce fechada** e **nunca aceita votos**.
+  duração 0 ou negativa **nascia fechada** e **nunca aceitava votos**.
 - Consequência agravada: como a pauta só pode ter **uma única sessão** (regra R5) e não existe
-  edição/cancelamento de pauta ou sessão, essa pauta fica **permanentemente inutilizável** —
-  nenhum voto pode ser coletado e o "resultado" apurado será sempre EMPATE (0 × 0).
+  edição/cancelamento de pauta ou sessão, a pauta ficava **permanentemente inutilizável** —
+  nenhum voto podia ser coletado e o "resultado" apurado era sempre EMPATE (0 × 0).
 
-**Exemplo concreto**
+**Comportamento atual**
+
+Valores `0` ou negativos são **recusados na criação da pauta** (HTTP 400) com a mensagem
+"O tempo de votação deve ser maior que zero". Como toda duração persistida é ≥ 1 minuto, não
+há como criar sessão que já nasça fechada por duração inválida.
+
+**Exemplo (comportamento atual)**
 
 ```json
 POST /pautas
 {
-  "titulo": "Re forma estatutária do capítulo quatro",
+  "titulo": "Reforma estatutária do capítulo quatro",
   "tempo_votacao_minutos": -5
 }
-→ 201 criada (aceita sem erro)
+→ 400 Bad Request — "O tempo de votação deve ser maior que zero"
 ```
 
-```json
-POST /sessoes
-{ "pauta_id": 1 }
-→ 201 criada, mas is_open: false (sessão já encerrada)
-```
+**Impacto**: originalmente Alta — corrigido; sem impacto residual (validação na entrada).
 
-**Impacto**: Alta — a pauta é "queimada" silenciosamente, sem nenhum aviso ao usuário.
-
-**Evidência**: `PautaRequestDTO` (`@NotNull tempoVotacaoMinutos`), `SessaoService.saveSessao()`
+**Evidência**: `PautaRequestDTO` (`@Positive tempoVotacaoMinutos`, `@NotNull`);
+teste `PautaRequestDTOValidationTest`; `SessaoService.saveSessao()`
 (`now.plusMinutes(dur)`), `Sessao.isOpen()` (`now.isBefore(expiresAt)`), R5.
 
 ---
@@ -61,11 +63,12 @@ POST /sessoes
 
 Sem `@Max`, o cálculo `now.plusMinutes(dur)` pode exceder a capacidade de representação
 interna do `LocalDateTime`, resultando em erro de aritmética/`DateTimeException` → erro
-genérico **HTTP 500** ao abrir a sessão. Não há mensagem de negócio.
+genérico **HTTP 500** ao abrir a sessão. Não há mensagem de negócio. (O limite inferior —
+`@Positive` — já existe; o problema aqui é a ausência de limite superior.)
 
 **Impacto**: Média — cenário extremo, mas a API responde 500 sem orientação.
 
-**Evidência**: tipo `Long` de `tempoVotacaoMinutos`, ausência de `@Max`/`@Positive`, uso de
+**Evidência**: tipo `Long` de `tempoVotacaoMinutos`, ausência de `@Max`, uso de
 `plusMinutes(long)`.
 
 ---
@@ -225,8 +228,7 @@ na resposta), ausência de UUID/timestamp distribuído.
 
 **Gatilho**
 
-Uma sessão chega ao fim sem nenhum voto registrado (ex.: duração inválida — ver PF1 — ou
-ninguém votou).
+Uma sessão chega ao fim sem nenhum voto registrado (ex.: ninguém participou).
 
 **O que acontece**
 
@@ -320,7 +322,7 @@ falha PF1/PF4/PF8.
 
 | # | Ponto fraco / modo de falha                 | Gatilho                          | Consequência observada                     | Impacto |
 | - | ------------------------------------------- | -------------------------------- | ------------------------------------------ | ------- |
-| 1 | Duração 0/negativa aceita                   | `tempo_votacao_minutos` ≤ 0      | Sessão nasce fechada; pauta inutilizada     | Alta    |
+| 1 | Duração 0/negativa aceita (PF1)             | `tempo_votacao_minutos` ≤ 0      | **Corrigido** — rejeitado na criação (400) | Corrigida |
 | 2 | Sem limite superior de duração              | duração muito grande             | Overflow → HTTP 500                        | Média   |
 | 3 | `POST /sessoes` sem validação               | `pauta_id` nulo/ausente          | HTTP 500 em vez de 400                     | Média   |
 | 4 | 2ª sessão da pauta                          | violação R5                      | HTTP 500 em vez de 409/400                 | Alta    |
@@ -335,5 +337,5 @@ falha PF1/PF4/PF8.
 | 13 | Erros 500 genéricos / mensagens mistas      | exceções não mapeadas            | Diagnóstico dificultado                    | Baixa   |
 | 14 | Testes desatualizados                       | evolução de código               | Cobertura incorreta                        | Baixa   |
 
-**Recomendação de prioridade:** tratar PF8 (burlável) e PF1/PF3/PF4 (falhas comuns com impacto
-de negócio e mapeamento de erro incorreto) antes dos demais itens.
+**Recomendação de prioridade:** tratar PF8 (burlável) e PF3/PF4 (falhas comuns com impacto
+de negócio e mapeamento de erro incorreto) antes dos demais itens. PF1 está corrigido.
