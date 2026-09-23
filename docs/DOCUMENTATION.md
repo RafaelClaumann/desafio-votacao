@@ -66,7 +66,7 @@ execução pela comparação do horário atual com o horário de expiração.
 | [fluxos-de-negocio.md](fluxos-de-negocio.md)     | Principais fluxos de negócio, passo a passo.                    |
 | [api-operacoes.md](api-operacoes.md)             | Operações da API REST e como acionam as regras de negócio.      |
 | [erros-e-rejeicoes.md](erros-e-rejeicoes.md)     | Motivos de rejeição e mapeamento de erros HTTP.                 |
-| [traceabilidade.md](traceabilidade.md)           | Mapa regra → implementação e observações do código.             |
+| [traceabilidade.md](traceabilidade.md)           | Mapa regra → implementação, índices do banco e observações do código. |
 
 ## Observações Importantes
 

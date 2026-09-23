@@ -39,14 +39,18 @@ O sistema verifica se outro título igual já existe, ignorando diferenças de c
 **Violação**
 
 Se já existir uma pauta com o mesmo título (desconsiderando caixa), a criação é recusada
-(HTTP 409 — Conflito). A duplicidade também é bloqueada no banco por uma restrição de
-unicidade no título, funcionando como salvaguarda em caso de concorrência.
+(HTTP 409 — Conflito). A duplicidade também é bloqueada no banco pela salvaguarda
+`uk_pauta_titulo_lower`, que aplica a mesma regra insensível à caixa e funciona como
+defesa em caso de concorrência: em H2 (dev/teste) via coluna gerada `titulo_normalizado`
+(`LOWER(titulo)`) no `schema.sql`; em PostgreSQL (produção) via índice funcional único
+`LOWER(titulo)` no `.docker/postgres/init.sql`.
 
 **Implementação**
 
 `PautaService.savePauta()` → `existsByTituloIgnoreCase()`; persistência via
 `PautaRepositoryAdapter.save()` (que converte violação de integridade em
-`DuplicatedPautaException`).
+`DuplicatedPautaException`); salvaguarda `uk_pauta_titulo_lower` (coluna gerada no H2;
+índice funcional no Postgres).
 
 ### R3 — O título da pauta é normalizado e deve ter entre 20 e 150 caracteres
 

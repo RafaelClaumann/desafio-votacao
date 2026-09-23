@@ -195,26 +195,44 @@ previsível em ambos os cenários.
 
 ---
 
-## PF6 — Regra de título único aplicada de forma inconsistente entre aplicação e banco
+## PF6 — (RESOLVIDO) Regra de título único aplicada de forma inconsistente entre aplicação e banco
 
-**Gatilho**
+**Status: corrigido** — a salvaguarda do banco agora é **insensível à caixa**, igual à
+verificação da aplicação. O `schema.sql` trocou a constraint case-sensitive
+`UNIQUE(titulo)` por um **índice único funcional `uk_pauta_titulo_lower` em
+`LOWER(titulo)`**.
 
-Duas pautas com títulos que diferem **apenas em maiúsculas/minúsculas** (ex.: "Reforma X" e
-"reforma x") são submetidas, em especial de forma concorrente.
+**Comportamento anterior**
 
-**O que acontece**
-
-- A aplicação verifica duplicidade **ignorando caixa** (`existsByTituloIgnoreCase`) → regra
+- A aplicação verificava duplicidade **ignorando caixa** (`existsByTituloIgnoreCase`) → regra
   R2 sequencialmente bloqueia outercase.
-- Porém a constraint do banco (`UNIQUE(titulo)`) é **sensível à caixa** (H2 padrão). Em uma
-  corrida em que ambas passem da checagem em memória, o banco **não** bloqueia os dois títulos
-  com variação de caixa → pautas "duplicadas" podem ser persistidas.
+- A constraint do banco (`UNIQUE(titulo)`) era **sensível à caixa** (H2 padrão). Em uma
+  corrida em que ambas passassem da checagem em memória, o banco **não** bloqueava os dois
+  títulos com variação de caixa → pautas "duplicadas" podiam ser persistidas.
 
-**Impacto**: Média — a salvaguarda do banco não reproduz a regra de negócio (divergência entre
-camadas).
+**Comportamento atual**
 
-**Evidência**: `SpringDataPautaRepository.existsByTituloIgnoreCase()` vs
-`schema.sql` `UNIQUE(titulo)`.
+O banco aplica a mesma unicidade da aplicação: dois títulos que diferem apenas pela caixa
+violam o índice `LOWER(titulo)` → `PautaRepositoryAdapter.save()` converte para
+`DuplicatedPautaException` → **HTTP 409**, mesmo em corrida.
+
+**Exemplo (comportamento atual)**
+
+```json
+POST /pautas   → 201 "Reforma estatutária do capítulo quatro"
+POST /pautas
+{
+  "titulo": "reforma estatutária do capítulo quatro",
+  "tempo_votacao_minutos": 10
+}
+→ 409 Conflict — "Já existe uma pauta com o título: reforma estatutária do capítulo quatro"
+```
+
+**Impacto**: originalmente Média — corrigido; aplicação e banco aplicam a mesma regra.
+
+**Evidência**: `schema.sql` (índice `uk_pauta_titulo_lower` em `LOWER(titulo)`),
+`SpringDataPautaRepository.existsByTituloIgnoreCase()`;
+teste `PautaRepositoryAdapterITTest.save_shouldReject_whenTitleDiffersOnlyByCase`.
 
 ---
 
@@ -388,7 +406,7 @@ fechada" possuem cobertura (`getOpenSessaoById*`).
 | 3 | `POST /sessoes` sem validação               | `pauta_id` nulo/ausente          | **Corrigido** — rejeitado na entrada (400) | Corrigida |
 | 4 | 2ª sessão da pauta                          | violação R5                      | **Corrigido** — rejeitado com 409 Conflict | Corrigida |
 | 5 | Corrida na criação de sessão                | duas requisições simultâneas     | **Corrigido** — integridade traduzida (409) | Corrigida |
-| 6 | Divergência case-sensitive de título        | corrida com caixa variada        | Duplicidade pode escapar da constraint      | Média   |
+| 6 | Divergência case-sensitive de título        | corrida com caixa variada        | **Corrigido** — índice único `LOWER(titulo)` | Corrigida |
 | 7 | Unicidade de CPF divergente (entidade/schema) | leitura/geração de DDL          | Regra ambígua; restrição futura indevida   | Baixa   |
 | 8 | CPF sem normalização                        | mesma pessoa, formatos diferentes | Voto duplicado do mesmo titular (burlou R10) | Alta    |
 | 9 | Fechamento depende do relógio local         | cluster/desvio de clock          | Fronteiras de exclusão divergentes         | Média   |
@@ -399,4 +417,4 @@ fechada" possuem cobertura (`getOpenSessaoById*`).
 | 14 | Testes desatualizados                       | evolução de código               | **Corrigido** — `SessaoServiceTest` alinhado    | Corrigida |
 
 **Recomendação de prioridade:** tratar PF8 (burlável) antes dos demais itens. PF1, PF2, PF3,
-PF4, PF5 e PF14 estão corrigidos.
+PF4, PF5, PF6 e PF14 estão corrigidos.
