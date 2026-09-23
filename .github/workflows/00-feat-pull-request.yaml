@@ -1,4 +1,5 @@
-name: Open PR to main
+name: '[CI] Auto PR Open'
+run-name: "Verify PR · ${{ github.ref_name }}"
 on:
   push:
     branches:
