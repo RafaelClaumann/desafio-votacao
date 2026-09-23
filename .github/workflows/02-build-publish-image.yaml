@@ -88,10 +88,3 @@ jobs:
         run: |
           TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
           docker save "$TAG" -o app-image.tar
-
-      - name: Publish Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-image-${{ replace(github.ref_name, '/', '-') }}
-          path: app-image.tar
-          retention-days: 1
