@@ -31,12 +31,14 @@ services:
       - "-c"
       - "log_min_error_statement=info"
 
-  adminer:
-    image: adminer
-    container_name: adminer
+  pgweb:
+    image: sosedoff/pgweb
+    container_name: pgweb
     restart: always
     ports:
-      - "8084:8080"
+      - "8084:8081"
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/votacao_db?sslmode=disable
     depends_on:
       - postgres
 
