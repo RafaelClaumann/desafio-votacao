@@ -301,13 +301,13 @@ Toda resposta de erro segue o formato:
   "error": "Bad Request",
   "message": "mensagem do erro",
   "path": "/votos",
-  "fieldErrors": [
+  "field_errors": [
     { "field": "documento", "message": "O documento é obrigatório" }
   ]
 }
 ```
 
-- `fieldErrors` é preenchido apenas em erros de validação (`400`).
+- `field_errors` é preenchido apenas em erros de validação (`400`).
 - Erros de negócio retornam 400/409 (ver descrito em cada operação); falhas não previstas
   retornam `500`.
 
