@@ -16,14 +16,14 @@ public record VotoDTO(
 
         @Size(min = 3, max = 3)
         @NotBlank(message = "A escolha do voto é obrigatória")
-        String escolhaVoto
+        Voto.Escolha escolhaVoto
 ) {
 
     public static VotoDTO fromDomain(Voto saved) {
         return new VotoDTO(
                 saved.sessao().id(),
                 saved.documento(),
-                saved.escolhaVoto().name()
+                saved.escolhaVoto()
         );
     }
 
