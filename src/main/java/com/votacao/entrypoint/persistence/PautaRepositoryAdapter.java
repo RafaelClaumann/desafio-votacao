@@ -2,9 +2,11 @@ package com.votacao.entrypoint.persistence;
 
 import com.votacao.application.gateway.PautaRepository;
 import com.votacao.application.model.Pauta;
+import com.votacao.application.model.exception.DuplicatedPautaException;
 import com.votacao.entrypoint.mapper.PautaMapper;
 import com.votacao.entrypoint.persistence.entity.PautaEntity;
 import com.votacao.entrypoint.persistence.jpa.SpringDataPautaRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -23,8 +25,12 @@ public class PautaRepositoryAdapter implements PautaRepository {
 
     @Override
     public Pauta save(Pauta pauta) {
-        PautaEntity saved = repository.save(mapper.toEntity(pauta));
-        return mapper.toDomain(saved);
+        try {
+            PautaEntity saved = repository.save(mapper.toEntity(pauta));
+            return mapper.toDomain(saved);
+        } catch (DataIntegrityViolationException e) {
+            throw new DuplicatedPautaException(pauta.titulo());
+        }
     }
 
     @Override
