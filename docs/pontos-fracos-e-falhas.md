@@ -268,24 +268,31 @@ teste `VotoRepositoryAdapterITTest.save_shouldAllowSameDocumentoInDifferentSessi
 
 ---
 
-## PF8 — CPF sem normalização permite votar 2 vezes com o mesmo documento
+## PF8 — (RESOLVIDO) CPF sem normalização permite votar 2 vezes com o mesmo documento
+
+**Status: corrigido** — `VotoService.votar()` **normaliza** o documento para somente dígitos
+antes da verificação de duplicidade (R10) e da persistência. Com isso, "123.456.789-09" e
+"12345678909" são tratados como **o mesmo documento**: o segundo voto na mesma sessão é recusado
+(409), e a salvaguarda `uk_voto_sessao_documento` do banco passa a bloquear também a variação de
+formatação.
 
 **Gatilho**
 
 Um associado vota na sessão usando o CPF com pontuação ("123.456.789-09") e depois com o CPF
 somente números ("12345678909").
 
-**O que acontece**
+**O que acontecia antigamente**
 
-A validação `@CPF` aceita **ambos os formatos**, e o sistema **não normaliza** o documento
+A validação `@CPF` aceita **ambos os formatos**, e o sistema **não normalizava** o documento
 antes de comparar/armazenar. Como a unicidade (R10) compara a string literal, os dois registros
-são considerados **documentos diferentes** → o mesmo titular consegue registrar **dois votos na
+eram considerados **documentos diferentes** → o mesmo titular conseguia registrar **dois votos na
 mesma sessão**, burlando a regra R10 pela formatação.
 
 **Impacto**: **Alta** — regra de negócio contornável por um valor trivial e legal de CPF.
 
-**Evidência**: `VotoDTO` (`@CPF`), `VotoService.votar()` (`existsBySessaoIdAndDocumento` com a
-string bruta), ausência de normalização entre a entrada e o repositório.
+**Evidência**: `VotoService.votar()` (`normalizarDocumento` antes de `existsBySessaoIdAndDocumento`
+e da persistência); `VotoServiceTest` com cenários de normalização do documento e de recusa com
+formatação distinta.
 
 ---
 
@@ -417,7 +424,7 @@ fechada" possuem cobertura (`getOpenSessaoById*`).
 | 5 | Corrida na criação de sessão                | duas requisições simultâneas     | **Corrigido** — integridade traduzida (409) | Corrigida |
 | 6 | Divergência case-sensitive de título        | corrida com caixa variada        | **Corrigido** — índice único `LOWER(titulo)` | Corrigida |
 | 7 | Unicidade de CPF divergente (entidade/schema) | leitura/geração de DDL          | **Corrigido** — entidade declara `uk_voto_sessao_documento` | Corrigida |
-| 8 | CPF sem normalização                        | mesma pessoa, formatos diferentes | Voto duplicado do mesmo titular (burlou R10) | Alta    |
+| 8 | CPF sem normalização                        | mesma pessoa, formatos diferentes | **Corrigido** — `VotoService` normaliza antes do check | Corrigida |
 | 9 | Fechamento depende do relógio local         | cluster/desvio de clock          | Fronteiras de exclusão divergentes         | Média   |
 | 10 | Sessão sem votos → EMPATE                   | zero participação                | Empate silencioso                          | Baixa   |
 | 11 | `hasSessao` não exposto                     | consulta de pautas               | Necessário cruzamento com `/sessoes`       | Baixa   |
@@ -425,5 +432,6 @@ fechada" possuem cobertura (`getOpenSessaoById*`).
 | 13 | Erros 500 genéricos / mensagens mistas      | exceções não mapeadas            | Diagnóstico dificultado                    | Baixa   |
 | 14 | Testes desatualizados                       | evolução de código               | **Corrigido** — `SessaoServiceTest` alinhado    | Corrigida |
 
-**Recomendação de prioridade:** tratar PF8 (burlável) antes dos demais itens. PF1, PF2, PF3,
-PF4, PF5, PF6, PF7 e PF14 estão corrigidos.
+**Recomendação de prioridade:** PF1, PF2, PF3, PF4, PF5, PF6, PF7, PF8 e PF14 estão corrigidos.
+Próximos candidatos: PF9 (fechamento por relógio local, se houver cluster) e PF12 (CPF
+autodeclarado).

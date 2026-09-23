@@ -204,9 +204,9 @@ O documento é validado como um CPF bem-formado antes do voto ser aceito.
 
 Um documento que não seja um CPF válido recusa o voto (HTTP 400) na validação de entrada.
 
-> Observação (limitação de dados): o documento **não é normalizado** no armazenamento. Um
-> mesmo CPF numérico informado em formatos diferentes (com/sem pontuação) seria tratado pelo
-> sistema como documentos distintos, afetando a unicidade de votos (ver R10 e observações em
+> Observação (normalização): o documento é **normalizado** para somente dígitos em
+> `VotoService.votar()` antes de ser comparado e armazenado. Os formatos com e sem pontuação
+> são tratados como o **mesmo documento** (reforça a unicidade de R10; ver
 > [traceabilidade.md](traceabilidade.md#observações)).
 
 **Implementação**
@@ -231,7 +231,8 @@ salvaguarda contra votos simultâneos abusando da verificação em memória.
 
 **Implementação**
 
-`VotoService.votar()` → `votoRepository.existsBySessaoIdAndDocumento()`; e
+`VotoService.votar()` (normaliza o CPF para somente dígitos e consulta
+`votoRepository.existsBySessaoIdAndDocumento()` com a forma canônica); e
 `VotoRepositoryAdapter.save()` traduz violação de integridade em `DuplicatedVoteException`.
 
 ### R11 — O voto só pode ser SIM ou NÃO
