@@ -14,7 +14,7 @@ Registrar um novo tema a ser deliberado, com o tempo de votação em minutos.
 | Campo                 | Tipo   | Regra                                              |
 | --------------------- | ------ | -------------------------------------------------- |
 | `titulo`              | texto  | Obrigatório, 20–150 caracteres, esp. das bordas removidos |
-| `tempo_votacao_minutos` | inteiro | Obrigatório (sem validação de positividade)     |
+| `tempo_votacao_minutos` | inteiro | Obrigatório, **1 a 43200** (maior que zero e no máximo 30 dias) |
 
 **Regras de negócio**
 

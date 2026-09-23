@@ -9,7 +9,7 @@ Mapa das regras de negócio para as classes e métodos que as implementam.
 | R3 — Normalização e tamanho do título | `Pauta` (constructor faz `titulo.trim()`); `PautaRequestDTO` (`@Size(20–150)`); `titulo VARCHAR(150)` em `schema.sql` |
 | R4 — Sessão exige pauta existente | `SessaoService.saveSessao()` → `PautaService.getPautaById()` → `PautaNotFoundException` |
 | R5 — Uma sessão por pauta | `SessaoService.saveSessao()` → `sessaoRepository.existsByPautaId()`; índice único `uk_sessao_pauta(sessoes.pauta_id)` em `schema.sql` |
-| R6 — Duração definida pela pauta | `SessaoService.saveSessao()`: `expiresAt = now.plusMinutes(pauta.tempoVotacaoMinutos())` |
+| R6 — Duração definida pela pauta | `PautaRequestDTO` (`@Positive` + `@Max(43200)` em `tempoVotacaoMinutos`); `SessaoService.saveSessao()`: `expiresAt = now.plusMinutes(pauta.tempoVotacaoMinutos())` |
 | R7/R8 — Votos somente em sessão aberta | `VotoService.votar()` → `SessaoService.getOpenSessaoById()` → `Sessao.isOpen(now)` e `SessaoIsClosedException` |
 | R9 — CPF válido | `VotoDTO` (anotação `@CPF`) |
 | R10 — Um voto por CPF por sessão | `VotoService.votar()` → `VotoRepository.existsBySessaoIdAndDocumento()`; `VotoRepositoryAdapter.save()` → `DuplicatedVoteException`; constraint `uk_voto_sessao_documento(sessao_id, documento)` em `schema.sql` |
@@ -61,8 +61,10 @@ As exceções são traduzidas para HTTP em `GlobalExceptionHandler`:
 
 ## Observações
 
-1. **Duração sem validação de positividade.** `PautaRequestDTO` exige apenas presença da
-   duração (`@NotNull`), sem `@Min`/`@Positive`. Valores 0/negativos criam sessão já fechada.
+1. **Duração validada no intervalo 1–43200 minutos.** `PautaRequestDTO` exige presença da
+   duração (`@NotNull`), valor **maior que zero** (`@Positive`) e **no máximo 43200 minutos /
+   30 dias** (`@Max`). Valores 0/negativos criariam sessão já fechada; valores acima do teto
+   estourariam o intervalo de datas no cálculo de expiração.
 2. **`IllegalArgumentException` não mapeada em R5.** `SessaoService.saveSessao()` a usa para
    "já existe sessão para a pauta"; sem handler específico, o cliente recebe 500. Violações de
    integridade em `SessaoRepositoryAdapter` também não são traduzidas (diferente dos adapters

@@ -9,7 +9,8 @@ e por quê**, e não apenas como o código está organizado.
 O sistema gerencia **pautas de votação** (pautas) de uma assembleia. Uma pauta representa
 um tema/assunto que será deliberado por meio de votação associada. O fluxo geral é:
 
-1. Um organizador cria uma **pauta**, informando o título e o tempo de votação em minutos.
+1. Um organizador cria uma **pauta**, informando o título e o tempo de votação em minutos
+   (entre 1 e 43200 — até 30 dias).
 2. Um organizador abre uma **sessão de votação** para a pauta. A sessão fica aberta pelo
    tempo definido na pauta e, ao fim, fecha-se automaticamente (sem intervenção externa).
 3. Durante a janela em que a sessão está aberta, associados (identificados por **CPF**)
