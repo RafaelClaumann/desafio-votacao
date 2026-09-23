@@ -22,7 +22,7 @@ public class PautaEntity {
     @Column(nullable = false)
     private String titulo;
 
-    @Column(name = "tempo_votacao_segundos", nullable = false)
+    @Column(nullable = false)
     private Long tempoVotacaoMinutos = 1L;
 
 }
