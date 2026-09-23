@@ -92,6 +92,6 @@ jobs:
       - name: Publish Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: docker-image-${{ github.run_number }}
+          name: docker-image-${{ github.sha }}
           path: app-image.tar
           retention-days: 1
