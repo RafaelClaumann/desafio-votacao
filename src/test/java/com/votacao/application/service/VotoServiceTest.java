@@ -37,15 +37,6 @@ class VotoServiceTest {
 
     private static final Long ID_SESSAO = 1L;
 
-    private Sessao openSessao() {
-        return new Sessao(
-                ID_SESSAO,
-                new Pauta(1L, "Reforma estatutária do capítulo quatro", 10L),
-                LocalDateTime.now().minusMinutes(1),
-                LocalDateTime.now().plusMinutes(9)
-        );
-    }
-
     @Test
     @DisplayName("votar should normalize the documento before checking duplicity and saving")
     void votar_shouldNormalizeDocumento_beforeCheckingDuplicityAndSaving() {
@@ -99,6 +90,15 @@ class VotoServiceTest {
         assertEquals(ID_SESSAO, result.sessao().id());
         verify(votoRepository).existsBySessaoIdAndDocumento(ID_SESSAO, "12345678909");
         verify(votoRepository).save(any(Voto.class));
+    }
+
+    private Sessao openSessao() {
+        return new Sessao(
+                ID_SESSAO,
+                new Pauta(1L, "Reforma estatutária do capítulo quatro", 10L),
+                LocalDateTime.now().minusMinutes(1),
+                LocalDateTime.now().plusMinutes(9)
+        );
     }
 
 }
