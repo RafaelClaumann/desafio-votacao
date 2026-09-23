@@ -56,7 +56,7 @@ public class SessaoController {
     @GetMapping("/{idSessao}/resultado")
     public ResponseEntity<ResultadoVotacaoResponse> apurar(@PathVariable long idSessao) {
         ApuracaoSessao resultado = votoService.apurarVotosSessao(idSessao);
-        return ResponseEntity.ok(ResultadoVotacaoResponse.fromDomain(resultado));
+        return ResponseEntity.ok(mapper.toResponse(resultado));
     }
 
 }
