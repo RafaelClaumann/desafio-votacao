@@ -1,5 +1,6 @@
 package com.votacao.entrypoint.api.handler;
 
+import com.votacao.application.model.exception.DuplicatedPautaException;
 import com.votacao.application.model.exception.DuplicatedVoteException;
 import com.votacao.application.model.exception.PautaNotFoundException;
 import com.votacao.application.model.exception.SessaoIsClosedException;
@@ -10,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -30,6 +32,11 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, "Erro de validação", request, fields);
     }
 
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleUnreadable(HttpMessageNotReadableException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
+    }
+
     @ExceptionHandler(SessaoNotFoundException.class)
     public ResponseEntity<ApiError> handleSessaoNotFound(SessaoNotFoundException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
@@ -47,6 +54,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DuplicatedVoteException.class)
     public ResponseEntity<ApiError> handleDuplicatedVote(DuplicatedVoteException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(DuplicatedPautaException.class)
+    public ResponseEntity<ApiError> handleDuplicatedPauta(DuplicatedPautaException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 

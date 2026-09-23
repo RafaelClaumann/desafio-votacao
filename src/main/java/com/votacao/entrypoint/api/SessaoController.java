@@ -3,9 +3,11 @@ package com.votacao.entrypoint.api;
 import com.votacao.application.model.Sessao;
 import com.votacao.application.service.SessaoService;
 import com.votacao.application.service.VotoService;
-import com.votacao.application.service.query.ResultadoVotosSessao;
+import com.votacao.application.service.query.ApuracaoSessao;
 import com.votacao.entrypoint.api.dto.ResultadoVotacaoResponse;
 import com.votacao.entrypoint.api.dto.SessaoDTO;
+import com.votacao.entrypoint.api.dto.SessaoResponseDTO;
+import com.votacao.entrypoint.mapper.SessaoMapper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,14 +26,16 @@ public class SessaoController {
 
     private final SessaoService service;
     private final VotoService votoService;
+    private final SessaoMapper mapper;
 
-    public SessaoController(SessaoService service, VotoService votoService) {
+    public SessaoController(SessaoService service, VotoService votoService, SessaoMapper mapper) {
         this.service = service;
         this.votoService = votoService;
+        this.mapper = mapper;
     }
 
     @PostMapping
-    public ResponseEntity<SessaoDTO> save(@RequestBody final SessaoDTO requestBody) {
+    public ResponseEntity<SessaoResponseDTO> save(@RequestBody final SessaoDTO requestBody) {
         Sessao saved = service.saveSessao(requestBody.pautaId());
 
         URI location = ServletUriComponentsBuilder
@@ -40,19 +44,19 @@ public class SessaoController {
                 .buildAndExpand(saved.id())
                 .toUri();
 
-        return ResponseEntity.created(location).body(SessaoDTO.fromDomain(saved));
+        return ResponseEntity.created(location).body(mapper.toDTO(saved));
     }
 
     @GetMapping
-    public ResponseEntity<List<SessaoDTO>> fetch() {
+    public ResponseEntity<List<SessaoResponseDTO>> fetch() {
         List<Sessao> sessoes = service.getSessoes();
-        return ResponseEntity.ok(SessaoDTO.toDTOList(sessoes));
+        return ResponseEntity.ok(mapper.toDTOList(sessoes));
     }
 
     @GetMapping("/{idSessao}/resultado")
-    public ResponseEntity<ResultadoVotacaoResponse> test(@PathVariable long idSessao) {
-        ResultadoVotosSessao resultado = votoService.apurarVotosSessao(idSessao);
-        return ResponseEntity.ok(ResultadoVotacaoResponse.from(resultado));
+    public ResponseEntity<ResultadoVotacaoResponse> apurar(@PathVariable long idSessao) {
+        ApuracaoSessao resultado = votoService.apurarVotosSessao(idSessao);
+        return ResponseEntity.ok(mapper.toResponse(resultado));
     }
 
 }

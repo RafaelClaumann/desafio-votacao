@@ -2,6 +2,7 @@ package com.votacao.entrypoint.persistence;
 
 import com.votacao.application.gateway.SessaoRepository;
 import com.votacao.application.model.Sessao;
+import com.votacao.entrypoint.mapper.SessaoMapper;
 import com.votacao.entrypoint.persistence.entity.SessaoEntity;
 import com.votacao.entrypoint.persistence.jpa.SpringDataSessaoRepository;
 import org.springframework.stereotype.Component;
@@ -14,16 +15,18 @@ import java.util.Set;
 public class SessaoRepositoryAdapter implements SessaoRepository {
 
     private final SpringDataSessaoRepository repository;
+    private final SessaoMapper mapper;
 
-    public SessaoRepositoryAdapter(SpringDataSessaoRepository repository) {
+    public SessaoRepositoryAdapter(SpringDataSessaoRepository repository, SessaoMapper mapper) {
         this.repository = repository;
+        this.mapper = mapper;
     }
 
     @Override
     public Sessao save(Sessao sessao) {
-        SessaoEntity sessaoEntity = SessaoEntity.fromDomain(sessao);
+        SessaoEntity sessaoEntity = mapper.toEntity(sessao);
         SessaoEntity saved = repository.save(sessaoEntity);
-        return SessaoEntity.fromEntity(saved);
+        return mapper.toDomain(saved);
     }
 
     @Override
@@ -33,12 +36,12 @@ public class SessaoRepositoryAdapter implements SessaoRepository {
 
     @Override
     public List<Sessao> findAll() {
-        return repository.findAll().stream().map(SessaoEntity::fromEntity).toList();
+        return repository.findAll().stream().map(mapper::toDomain).toList();
     }
 
     @Override
     public Optional<Sessao> findById(Long sessaoId) {
-        return repository.findById(sessaoId).map(SessaoEntity::fromEntity);
+        return repository.findById(sessaoId).map(mapper::toDomain);
     }
 
     @Override
