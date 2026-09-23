@@ -3,9 +3,8 @@ run-name: "Docker · ${{ github.ref_name }}"
 
 on:
   push:
-    branches: [ main, 'feat/**' ]
+    branches: [ main ]
     tags: [ 'v*.*.*' ]
-  workflow_dispatch:
 
 jobs:
   build-image:
@@ -91,15 +90,3 @@ jobs:
           curl --fail http://localhost:8080/actuator/health
           docker logs app
           docker stop app
-
-      - name: Save Image as .tar
-        run: |
-          TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
-          docker save "$TAG" -o app-image.tar
-
-      - name: Publish Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-image-${{ github.sha }}
-          path: app-image.tar
-          retention-days: 1
