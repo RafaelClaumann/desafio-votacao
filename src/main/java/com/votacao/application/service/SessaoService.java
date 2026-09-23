@@ -18,11 +18,23 @@ public class SessaoService {
     private final SessaoRepository sessaoRepository;
     private final PautaService pautaService;
 
+    /**
+     * Cria uma instância do serviço de sessões.
+     *
+     * @param sessaoRepository repositório de sessões
+     * @param pautaService serviço de pautas
+     */
     public SessaoService(SessaoRepository sessaoRepository, PautaService pautaService) {
         this.sessaoRepository = sessaoRepository;
         this.pautaService = pautaService;
     }
 
+    /**
+     * Abre uma sessão de votação para uma pauta existente.
+     *
+     * @param pautaId identificador da pauta
+     * @return sessão criada
+     */
     @Transactional
     public Sessao saveSessao(Long pautaId) {
         Pauta pauta = pautaService.getPautaById(pautaId);
@@ -41,10 +53,21 @@ public class SessaoService {
         return sessaoRepository.save(sessao);
     }
 
+    /**
+     * Lista todas as sessões cadastradas.
+     *
+     * @return lista de sessões
+     */
     public List<Sessao> getSessoes() {
         return sessaoRepository.findAll();
     }
 
+    /**
+     * Obtém uma sessão aberta por identificador.
+     *
+     * @param sessaoId identificador da sessão
+     * @return sessão aberta
+     */
     public Sessao getOpenSessaoById(Long sessaoId) {
         Sessao sessao = sessaoRepository.findById(sessaoId)
                 .orElseThrow(() -> new SessaoNotFoundException(sessaoId));
@@ -57,6 +80,12 @@ public class SessaoService {
         return sessao;
     }
 
+    /**
+     * Obtém uma sessão fechada por identificador.
+     *
+     * @param sessaoId identificador da sessão
+     * @return sessão fechada
+     */
     public Sessao getClosedSessaoById(Long sessaoId) {
         Sessao sessao = sessaoRepository.findById(sessaoId)
                 .orElseThrow(() -> new SessaoNotFoundException(sessaoId));

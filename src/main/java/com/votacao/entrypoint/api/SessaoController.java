@@ -28,12 +28,25 @@ public class SessaoController {
     private final VotoService votoService;
     private final SessaoMapper mapper;
 
+    /**
+     * Cria o controlador de sessões.
+     *
+     * @param service serviço de sessões
+     * @param votoService serviço de votação para apuração
+     * @param mapper conversor entre sessões e DTOs
+     */
     public SessaoController(SessaoService service, VotoService votoService, SessaoMapper mapper) {
         this.service = service;
         this.votoService = votoService;
         this.mapper = mapper;
     }
 
+    /**
+     * Abre uma nova sessão para uma pauta.
+     *
+     * @param requestBody dados da sessão
+     * @return sessão criada com URI de localização
+     */
     @PostMapping
     public ResponseEntity<SessaoResponseDTO> save(@RequestBody final SessaoDTO requestBody) {
         Sessao saved = service.saveSessao(requestBody.pautaId());
@@ -47,12 +60,23 @@ public class SessaoController {
         return ResponseEntity.created(location).body(mapper.toDTO(saved));
     }
 
+    /**
+     * Lista todas as sessões cadastradas.
+     *
+     * @return lista de sessões
+     */
     @GetMapping
     public ResponseEntity<List<SessaoResponseDTO>> fetch() {
         List<Sessao> sessoes = service.getSessoes();
         return ResponseEntity.ok(mapper.toDTOList(sessoes));
     }
 
+    /**
+     * Apura o resultado de uma sessão fechada.
+     *
+     * @param idSessao identificador da sessão
+     * @return resultado da apuração
+     */
     @GetMapping("/{idSessao}/resultado")
     public ResponseEntity<ResultadoVotacaoResponse> apurar(@PathVariable long idSessao) {
         ApuracaoSessao resultado = votoService.apurarVotosSessao(idSessao);

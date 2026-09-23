@@ -19,10 +19,21 @@ public class VotoController {
 
     private final VotoService service;
 
+    /**
+     * Cria o controlador de votos.
+     *
+     * @param service serviço de votação
+     */
     public VotoController(VotoService service) {
         this.service = service;
     }
 
+    /**
+     * Registra um voto em uma sessão aberta.
+     *
+     * @param requestBody dados do voto
+     * @return voto criado com URI de localização
+     */
     @PostMapping
     public ResponseEntity<VotoDTO> save(@RequestBody @Valid final VotoDTO requestBody) {
         Voto saved = service.votar(
