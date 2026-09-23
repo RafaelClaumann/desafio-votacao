@@ -91,24 +91,41 @@ teste `PautaControllerTest.save_shouldReject_whenDurationExceedsUpperLimit`;
 
 ---
 
-## PF3 — Criação de sessão sem validação da entrada (pautaId nulo)
+## PF3 — (RESOLVIDO) Criação de sessão sem validação da entrada (pautaId nulo)
 
-**Gatilho**
+**Status: corrigido** — `SessaoDTO.pautaId` agora exige valor **presente** (`@NotNull`) e
+`SessaoController.save()` valida o corpo com `@Valid`.
 
-O cliente envia `POST /sessoes` com corpo `{}` (ou sem `pauta_id`). Diferente de `/pautas` e
-`/votos`, o controller de sessões **não usa `@Valid`** e `SessaoDTO.pautaId` **não tem
-constraints**.
+**Comportamento anterior**
 
-**O que acontece**
+`POST /sessoes` com corpo `{}` (ou sem `pauta_id`) fazia `pautaId = null` chegar a
+`SessaoService.saveSessao(null)` → `findById(null)`. O Spring Data lançava
+`IllegalArgumentException` ("id must not be null"), que não possui handler específico →
+**HTTP 500** no lugar de um 400 de validação. Diferente de `/pautas` e `/votos`, o controller
+de sessões não usava `@Valid` e `SessaoDTO.pautaId` não tinha constraints.
 
-`pautaId = null` chega a `SessaoService.saveSessao(null)` → `findById(null)`. O Spring Data
-lança `IllegalArgumentException` ("id must not be null"), que não tem handler específico →
-**HTTP 500** no lugar de um 400 de validação.
+**Comportamento atual**
 
-**Impacto**: Média — falha comum de uso mapeada como erro interno.
+`pauta_id` ausente ou nulo é **recusado na entrada** (HTTP 400) pela Bean Validation, com a
+mensagem "O id da Pauta é obrigatório" — o `GlobalExceptionHandler` devolve o erro de campo
+`pautaId`. Nenhuma chamada chega ao serviço/repositório.
 
-**Evidência**: `SessaoController.save()` (sem `@Valid`), `SessaoDTO`,
-`PautaRepositoryAdapter.findById(null)`.
+**Exemplo (comportamento atual)**
+
+```json
+POST /sessoes
+{}
+→ 400 Bad Request — "Erro de validação"
+   [
+     { "field": "pautaId", "message": "O id da Pauta é obrigatório" }
+   ]
+```
+
+**Impacto**: originalmente Média — corrigido; sem impacto residual (validação na entrada,
+mesmo padrão de `/pautas` e `/votos`).
+
+**Evidência**: `SessaoDTO` (`@NotNull pautaId`), `SessaoController.save()` (`@Valid`);
+teste `SessaoControllerTest.save_shouldReject_whenPautaIdIsMissing`.
 
 ---
 
@@ -301,7 +318,7 @@ lida como regra implícita: "o CPF identifica o eleitor por autodeclaração".
 
 **Gatilho**
 
-Qualquer exceção não mapeada (PF2, PF3, PF4, PF5) ou falha interna.
+Qualquer exceção não mapeada (PF4, PF5) ou falha interna.
 
 **O que acontece**
 
@@ -342,7 +359,7 @@ falha PF1/PF4/PF8.
 | - | ------------------------------------------- | -------------------------------- | ------------------------------------------ | ------- |
 | 1 | Duração 0/negativa aceita (PF1)             | `tempo_votacao_minutos` ≤ 0      | **Corrigido** — rejeitado na criação (400) | Corrigida |
 | 2 | Sem limite superior de duração              | duração muito grande             | **Corrigido** — rejeitado na criação (400) | Corrigida |
-| 3 | `POST /sessoes` sem validação               | `pauta_id` nulo/ausente          | HTTP 500 em vez de 400                     | Média   |
+| 3 | `POST /sessoes` sem validação               | `pauta_id` nulo/ausente          | **Corrigido** — rejeitado na entrada (400) | Corrigida |
 | 4 | 2ª sessão da pauta                          | violação R5                      | HTTP 500 em vez de 409/400                 | Alta    |
 | 5 | Corrida na criação de sessão                | duas requisições simultâneas     | HTTP 500 (integridade não traduzida)       | Média   |
 | 6 | Divergência case-sensitive de título        | corrida com caixa variada        | Duplicidade pode escapar da constraint      | Média   |
@@ -355,5 +372,6 @@ falha PF1/PF4/PF8.
 | 13 | Erros 500 genéricos / mensagens mistas      | exceções não mapeadas            | Diagnóstico dificultado                    | Baixa   |
 | 14 | Testes desatualizados                       | evolução de código               | Cobertura incorreta                        | Baixa   |
 
-**Recomendação de prioridade:** tratar PF8 (burlável) e PF3/PF4 (falhas comuns com impacto
-de negócio e mapeamento de erro incorreto) antes dos demais itens. PF1 e PF2 estão corrigidos.
+**Recomendação de prioridade:** tratar PF8 (burlável) e PF4 (falha comum com impacto
+de negócio e mapeamento de erro incorreto) antes dos demais itens. PF1, PF2 e PF3 estão
+corrigidos.

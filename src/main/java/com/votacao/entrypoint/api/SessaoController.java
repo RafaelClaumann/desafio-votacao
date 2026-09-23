@@ -8,6 +8,7 @@ import com.votacao.entrypoint.api.dto.ResultadoVotacaoResponse;
 import com.votacao.entrypoint.api.dto.SessaoDTO;
 import com.votacao.entrypoint.api.dto.SessaoResponseDTO;
 import com.votacao.entrypoint.mapper.SessaoMapper;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,7 +36,7 @@ public class SessaoController {
     }
 
     @PostMapping
-    public ResponseEntity<SessaoResponseDTO> save(@RequestBody final SessaoDTO requestBody) {
+    public ResponseEntity<SessaoResponseDTO> save(@RequestBody @Valid final SessaoDTO requestBody) {
         Sessao saved = service.saveSessao(requestBody.pautaId());
 
         URI location = ServletUriComponentsBuilder
