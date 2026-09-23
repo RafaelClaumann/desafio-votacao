@@ -12,26 +12,26 @@ traduz isso para a API.
 | 400    | Tentativa de votar em uma sessão **fechada** (R7/R8).                            | `SessaoIsClosedException`                          |
 | 400    | Tentativa de apurar resultado de uma sessão ainda **aberta** (R12).              | `SessaoIsOpenException`                            |
 | 409    | Tentativa de criar pauta com **título duplicado** (R2).                          | `DuplicatedPautaException`                         |
+| 409    | Tentativa de abrir a **2ª sessão da mesma pauta** (R5).                          | `DuplicatedSessaoException`                        |
 | 409    | Tentativa de votar com **CPF que já votou na sessão** (R10).                     | `DuplicatedVoteException`                          |
-| 500    | Erros não previstos (inclusive cenários abaixo).                                  | `Exception` genérica                               |
+| 500    | Erros não previstos.                                                              | `Exception` genérica                               |
 
 ## Interpretação de negócio dos códigos
 
 - **HTTP 400 (Bad Request):** a operação é legítima, mas as condições de negócio não foram
   atendidas (objeto inexistente, sessão no estado errado, dados inválidos). Nada é gravado.
-- **HTTP 409 (Conflict):** a operação tenta violar uma regra de unicidade — título de pauta
-  ou voto do mesmo CPF na mesma sessão. Nada é gravado.
+- **HTTP 409 (Conflict):** a operação tenta violar uma regra de unicidade — título de pauta,
+  sessão por pauta ou voto do mesmo CPF na mesma sessão. Nada é gravado.
 - **HTTP 500 (Internal Server Error):** erro inesperado do servidor.
 
 ## Cenários adicionais
 
 ### Tentar abrir a segunda sessão de uma pauta (violação de R5)
 
-A verificação em `SessaoService.saveSessao()` lança `IllegalArgumentException`, que **não
-possui tratamento específico** no `GlobalExceptionHandler`. Na prática, o cliente recebe
-**HTTP 500**, embora a causa seja uma violação de regra de negócio. O banco também bloqueia
-(índice único), mas `SessaoRepositoryAdapter` não converte essa violação de integridade —
-portanto ela também cai no erro genérico 500.
+A verificação em `SessaoService.saveSessao()` lança `DuplicatedSessaoException`, mapeada para
+**HTTP 409** com a mensagem "Já existe uma sessão para a pauta: N". Em corrida, o banco
+bloqueia (índice único `uk_sessao_pauta`) e `SessaoRepositoryAdapter` converte a violação de
+integridade na mesma `DuplicatedSessaoException` → igualmente **409**.
 
 ### Concorrência ao votar com o mesmo CPF na mesma sessão
 

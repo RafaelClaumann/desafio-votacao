@@ -2,6 +2,7 @@ package com.votacao.entrypoint.api;
 
 import com.votacao.application.model.Pauta;
 import com.votacao.application.model.Sessao;
+import com.votacao.application.model.exception.DuplicatedSessaoException;
 import com.votacao.application.service.SessaoService;
 import com.votacao.application.service.VotoService;
 import com.votacao.entrypoint.api.dto.SessaoResponseDTO;
@@ -61,6 +62,24 @@ class SessaoControllerTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(header().exists("Location"));
+
+        verify(sessaoService).saveSessao(1L);
+    }
+
+    @Test
+    @DisplayName("Should reject with 409 when the pauta already has a session")
+    void save_shouldReject_whenPautaAlreadyHasSession() throws Exception {
+        when(sessaoService.saveSessao(1L)).thenThrow(new DuplicatedSessaoException(1L));
+
+        mockMvc.perform(post("/sessoes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "pauta_id": 1
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Já existe uma sessão para a pauta: 1"));
 
         verify(sessaoService).saveSessao(1L);
     }

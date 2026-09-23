@@ -8,7 +8,7 @@ Mapa das regras de negócio para as classes e métodos que as implementam.
 | R2 — Título único da pauta | `PautaService.savePauta()` → `PautaRepository.existsByTituloIgnoreCase()`; `PautaRepositoryAdapter.save()` captura `DataIntegrityViolationException` → `DuplicatedPautaException`; constraint `uk_pauta_titulo` em `schema.sql` |
 | R3 — Normalização e tamanho do título | `Pauta` (constructor faz `titulo.trim()`); `PautaRequestDTO` (`@Size(20–150)`); `titulo VARCHAR(150)` em `schema.sql` |
 | R4 — Sessão exige pauta existente | `SessaoDTO` (`@NotNull pautaId`) + `SessaoController.save()` (`@Valid`); `SessaoService.saveSessao()` → `PautaService.getPautaById()` → `PautaNotFoundException` |
-| R5 — Uma sessão por pauta | `SessaoService.saveSessao()` → `sessaoRepository.existsByPautaId()`; índice único `uk_sessao_pauta(sessoes.pauta_id)` em `schema.sql` |
+| R5 — Uma sessão por pauta | `SessaoService.saveSessao()` → `sessaoRepository.existsByPautaId()` → `DuplicatedSessaoException`; `SessaoRepositoryAdapter.save()` converte a violação do índice único `uk_sessao_pauta(sessoes.pauta_id)` em `schema.sql` |
 | R6 — Duração definida pela pauta | `PautaRequestDTO` (`@Positive` + `@Max(43200)` em `tempoVotacaoMinutos`); `SessaoService.saveSessao()`: `expiresAt = now.plusMinutes(pauta.tempoVotacaoMinutos())` |
 | R7/R8 — Votos somente em sessão aberta | `VotoService.votar()` → `SessaoService.getOpenSessaoById()` → `Sessao.isOpen(now)` e `SessaoIsClosedException` |
 | R9 — CPF válido | `VotoDTO` (anotação `@CPF`) |
@@ -56,6 +56,7 @@ As exceções são traduzidas para HTTP em `GlobalExceptionHandler`:
 | `SessaoIsClosedException` | 400 |
 | `SessaoIsOpenException`   | 400 |
 | `DuplicatedPautaException`| 409 |
+| `DuplicatedSessaoException`| 409 |
 | `DuplicatedVoteException` | 409 |
 | demais                    | 500 |
 
@@ -65,10 +66,10 @@ As exceções são traduzidas para HTTP em `GlobalExceptionHandler`:
    duração (`@NotNull`), valor **maior que zero** (`@Positive`) e **no máximo 43200 minutos /
    30 dias** (`@Max`). Valores 0/negativos criariam sessão já fechada; valores acima do teto
    estourariam o intervalo de datas no cálculo de expiração.
-2. **`IllegalArgumentException` não mapeada em R5.** `SessaoService.saveSessao()` a usa para
-   "já existe sessão para a pauta"; sem handler específico, o cliente recebe 500. Violações de
-   integridade em `SessaoRepositoryAdapter` também não são traduzidas (diferente dos adapters
-   de Pauta e Voto).
+2. **`DuplicatedSessaoException` para R5.** `SessaoService.saveSessao()` usa
+   `existsByPautaId` e lança essa exceção (mapeada para 409). Em corrida, a violação do
+   índice único em `SessaoRepositoryAdapter` também é convertida na mesma exceção (mesmo
+   padrão dos adapters de Pauta e Voto).
 3. **`pautaComStatuses()` não exposto.** O serviço `PautaService.pautaComStatuses()` calcula
    o indicador `hasSessao` (se a pauta já possui sessão), mas **nenhum controller o utiliza**;
    `GET /pautas` retorna apenas id/título/duração.
@@ -80,9 +81,9 @@ As exceções são traduzidas para HTTP em `GlobalExceptionHandler`:
 5. **CPF sem normalização.** O documento chega à persistência sem formatação canônica.
    O mesmo CPF numérico com formatações diferentes seria armazenado/comparado como valores
    distintos (relevante para a unicidade de R10).
-6. **Teste divergente da implementação.** `SessaoServiceTest.saveSessao_shouldThrowWhenPautaDoesNotExist`
-   espera `IllegalArgumentException("Pauta not found")`, mas a implementação atual lança
-   `PautaNotFoundException`. A documentação descreve o comportamento da implementação atual.
+6. **Testes de `SessaoService` alinhados.** `SessaoServiceTest` está ativo e cobre
+   `PautaNotFoundException`, `DuplicatedSessaoException` e a criação bem-sucedida, de acordo
+   com a implementação atual.
 7. **`Sessao.isOpen()` desconsidera `startedAt`.** O estado aberta/fechada depende somente de
    `expiresAt` (e de `expiresAt != null`). Como a criação sempre define `startedAt` e
    `expiresAt`, a janela efetiva de votação é `[criação, expiração)`.

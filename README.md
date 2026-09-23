@@ -167,8 +167,8 @@ curl -X POST http://localhost:8080/sessoes \
 
 - `400` — `pauta_id` **ausente ou nulo** ("O id da Pauta é obrigatório").
 - `400` — a pauta não existe.
-- `500` — a pauta já possui sessão (comportamento atual — o sistema não devolve um status de
-  conflito; consulte a pauta/lista de sessões antes de tentar abrir).
+- `409` — a pauta já possui sessão ("Já existe uma sessão para a pauta: N"); consulte a
+  pauta/lista de sessões antes de tentar abrir.
 
 ---
 

@@ -105,21 +105,17 @@ Se a pauta ainda não possui sessão, a sessão é criada.
 
 **Violação**
 
-Se a pauta já possui uma sessão, a abertura é recusada e nenhuma nova sessão é criada. A regra
+Se a pauta já possui uma sessão, a abertura é recusada e nenhuma nova sessão é criada
+(**HTTP 409** — "Já existe uma sessão para a pauta: N"). A regra
 vale pela vida inteira da pauta: mesmo depois de a sessão existente fechar, não é possível abrir
 outra sessão para a mesma pauta. O banco também aplica essa unicidade
-(índice único em `sessoes.pauta_id`).
-
-> Observação: essa violação é disparada internamente por `IllegalArgumentException`, que não
-> possui tratamento específico na API → o cliente recebe HTTP 500 (ver
-> [erros-e-rejeicoes.md](erros-e-rejeicoes.md#cenários-adicionais)). O tratamento específico
-> existiria apenas para corridas capturadas pelo banco, mas `SessaoRepositoryAdapter` também
-> não traduz essas exceções.
+(índice único em `sessoes.pauta_id`), traduzida pelo adapter em 409 sob corrida.
 
 **Implementação**
 
-`SessaoService.saveSessao()` → `sessaoRepository.existsByPautaId()`; constraint
-`uk_sessao_pauta` no `schema.sql`.
+`SessaoService.saveSessao()` → `sessaoRepository.existsByPautaId()` lança
+`DuplicatedSessaoException` (mapeada para 409); `SessaoRepositoryAdapter.save()` converte a
+violação do índice único `uk_sessao_pauta` no `schema.sql` em `DuplicatedSessaoException`.
 
 ### R6 — A duração da sessão é definida pela pauta
 

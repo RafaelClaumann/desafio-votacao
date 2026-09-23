@@ -3,6 +3,7 @@ package com.votacao.application.service;
 import com.votacao.application.gateway.SessaoRepository;
 import com.votacao.application.model.Pauta;
 import com.votacao.application.model.Sessao;
+import com.votacao.application.model.exception.DuplicatedSessaoException;
 import com.votacao.application.model.exception.SessaoIsClosedException;
 import com.votacao.application.model.exception.SessaoIsOpenException;
 import com.votacao.application.model.exception.SessaoNotFoundException;
@@ -28,7 +29,7 @@ public class SessaoService {
         Pauta pauta = pautaService.getPautaById(pautaId);
 
         if (sessaoRepository.existsByPautaId(pautaId)) {
-            throw new IllegalArgumentException("Sessão already exists for this Pauta");
+            throw new DuplicatedSessaoException(pautaId);
         }
 
         LocalDateTime now = LocalDateTime.now();

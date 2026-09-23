@@ -32,8 +32,7 @@ Objetivo: abrir o período de coleta de votos de uma pauta existente.
 Resultado: sessão criada (HTTP 201).
 
 Rejeições possíveis: `pauta_id` ausente/nulo (400) · pauta inexistente (400) · pauta já possui
-sessão (observação: resposta 500 —
-ver [erros-e-rejeicoes.md](erros-e-rejeicoes.md#cenários-adicionais)).
+sessão (409 — ver [erros-e-rejeicoes.md](erros-e-rejeicoes.md)).
 
 ---
 
