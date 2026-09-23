@@ -39,5 +39,5 @@ jobs:
         uses: cicirello/jacoco-badge-generator@v2
         with:
           jacoco-csv-file: target/site/jacoco/jacoco.csv
-          min-coverage: 80
+          minimum_coverage: ${{ vars.COVERAGE_THRESHOLD || '80' }}
           fail-if-coverage-less-than: true
