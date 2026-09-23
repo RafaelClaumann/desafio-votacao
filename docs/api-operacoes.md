@@ -70,8 +70,7 @@ HTTP 201 — sessão criada, com `id`, `id_pauta`, `started_at`, `expires_at` e 
 **Erros**
 
 `pauta_id` ausente ou nulo → 400 (validação de entrada). Pauta inexistente → 400. Pauta já
-possui sessão → em condições normais dispara `IllegalArgumentException` não mapeada → **500**
-(ver [erros-e-rejeicoes.md](erros-e-rejeicoes.md#cenários-adicionais)).
+possui sessão → **409** (mensagem "Já existe uma sessão para a pauta: N").
 
 ---
 

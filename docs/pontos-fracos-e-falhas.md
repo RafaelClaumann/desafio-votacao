@@ -129,45 +129,69 @@ teste `SessaoControllerTest.save_shouldReject_whenPautaIdIsMissing`.
 
 ---
 
-## PF4 — Abrir a 2ª sessão da mesma pauta resulta em HTTP 500
+## PF4 — (RESOLVIDO) Abrir a 2ª sessão da mesma pauta resulta em HTTP 500
 
-**Gatilho**
+**Status: corrigido** — `SessaoService.saveSessao()` agora lança `DuplicatedSessaoException`,
+mapeada para **HTTP 409** pelo `GlobalExceptionHandler` (mesmo padrão de
+`DuplicatedPautaException`/`DuplicatedVoteException`).
 
-O usuário tenta abrir (por engano) uma sessão para uma pauta que já tem sessão — violação da
-regra R5.
+**Comportamento anterior**
 
-**O que acontece**
-
-`SessaoService.saveSessao()` lança `IllegalArgumentException("Sessão already exists for this
-Pauta")`. Essa exceção **não possui handler** no `GlobalExceptionHandler`, então cai no caso
-genérico → **HTTP 500 "Erro interno do servidor"**, embora se trate de uma regra de negócio
+`SessaoService.saveSessao()` lançava `IllegalArgumentException("Sessão already exists for this
+Pauta")`. Essa exceção **não possuía handler** no `GlobalExceptionHandler`, então caía no caso
+genérico → **HTTP 500 "Erro interno do servidor"**, embora se tratasse de uma regra de negócio
 esperada e previsível (deveria ser 409/400).
 
-**Impacto**: Alta — erro comum de usuário (duplo clique / clique duplo em submit) respondido
-como falha interna, dificultando diagnóstico.
+**Comportamento atual**
 
-**Evidência**: `SessaoService.saveSessao()` (linha `existsByPautaId`), `GlobalExceptionHandler`
-(sem handler para `IllegalArgumentException`).
+Abrir uma sessão para uma pauta que **já possui sessão** (violação R5) é recusado com
+**HTTP 409 Conflict** e mensagem "Já existe uma sessão para a pauta: N". Nenhuma sessão é
+criada. A violação é capturada na verificação do serviço (sequencial) e também pelo banco
+(índice único), pois `SessaoRepositoryAdapter.save()` traduz `DataIntegrityViolationException`.
+
+**Exemplo (comportamento atual)**
+
+```json
+POST /sessoes
+{
+  "pauta_id": 1
+}
+→ 409 Conflict — "Já existe uma sessão para a pauta: 1"
+```
+
+**Impacto**: originalmente Alta — corrigido; sem impacto residual (erro de negócio mapeado).
+
+**Evidência**: `DuplicatedSessaoException`, `SessaoService.saveSessao()`
+(`existsByPautaId`), `GlobalExceptionHandler.handleDuplicatedSessao()` (409);
+testes `SessaoServiceTest.saveSessao_shouldThrowWhenSessionAlreadyExistsForPauta` e
+`SessaoControllerTest.save_shouldReject_whenPautaAlreadyHasSession`.
 
 ---
 
-## PF5 — Concorrência ao criar sessão não é traduzida (salvaguarda parcial)
+## PF5 — (RESOLVIDO) Concorrência ao criar sessão não é traduzida (salvaguarda parcial)
 
-**Gatilho**
+**Status: corrigido** — `SessaoRepositoryAdapter.save()` agora captura
+`DataIntegrityViolationException` (mesmo padrão de `PautaRepositoryAdapter` e
+`VotoRepositoryAdapter`) e a converte em `DuplicatedSessaoException` → **HTTP 409**.
 
-Duas requisições simultâneas tentam abrir sessão para a mesma pauta. A verificação
-`existsByPautaId` é **check-then-act** sem trava: as duas podem passar pela checagem.
+**Comportamento anterior**
 
-**O que acontece**
+Duas requisições simultâneas tentavam abrir sessão para a mesma pauta. A verificação
+`existsByPautaId` é **check-then-act** sem trava: as duas podiam passar pela checagem.
+O índice único `uk_sessao_pauta` bloqueava a duplicidade no banco, **mas**
+`SessaoRepositoryAdapter.save()` **não capturava** `DataIntegrityViolationException` (diferente
+dos adapters de Pauta e Voto) → a violação propagava como **HTTP 500**.
 
-O índice único `uk_sessao_pauta` bloqueia a duplicidade no banco, **mas**
-`SessaoRepositoryAdapter.save()` **não captura** `DataIntegrityViolationException` (diferente
-dos adapters de Pauta e Voto) → a violação propaga como **HTTP 500**.
+**Comportamento atual**
 
-**Impacto**: Média — cenário de corrida, resposta 500 e falta de mensagem de conflito.
+Em corrida, a violação do índice único é traduzida para `DuplicatedSessaoException` →
+**HTTP 409**, com a mesma mensagem do caso sequencial. O cliente recebe um erro de conflito
+previsível em ambos os cenários.
 
-**Evidência**: `SessaoRepositoryAdapter.save()`, `schema.sql` (índice `uk_sessao_pauta`),
-comparação com `PautaRepositoryAdapter`/`VotoRepositoryAdapter`.
+**Impacto**: originalmente Média — corrigido; a integridade passa a ser traduzida.
+
+**Evidência**: `SessaoRepositoryAdapter.save()` (captura de `DataIntegrityViolationException`),
+`schema.sql` (índice `uk_sessao_pauta`), comparação com `PautaRepositoryAdapter`/`VotoRepositoryAdapter`.
 
 ---
 
@@ -318,7 +342,7 @@ lida como regra implícita: "o CPF identifica o eleitor por autodeclaração".
 
 **Gatilho**
 
-Qualquer exceção não mapeada (PF4, PF5) ou falha interna.
+Qualquer exceção não mapeada ou falha interna.
 
 **O que acontece**
 
@@ -333,23 +357,25 @@ duplicada, inglês para os demais), dificultando o tratamento uniforme no client
 
 ---
 
-## PF14 — Testes fora de sincronia com a implementação
+## PF14 — (RESOLVIDO) Testes fora de sincronia com a implementação
 
-**Gatilho**
+**Status: corrigido** — `SessaoServiceTest` foi reativado e alinhado à implementação atual:
+`saveSessao_shouldThrowWhenPautaDoesNotExist` agora espera `PautaNotFoundException`, e foi
+adicionada cobertura para a violação R5 (`DuplicatedSessaoException`) e para a criação bem-sucedida.
 
-Manutenção/evolução do comportamento de negócio.
+**Comportamento anterior**
 
-**O que acontece**
-
-`SessaoServiceTest.saveSessao_shouldThrowWhenPautaDoesNotExist` espera
+`SessaoServiceTest` estava **inteiramente comentado** e, quando ativo, esperava
 `IllegalArgumentException("Pauta not found")`, mas a implementação atual lança
-`PautaNotFoundException`. O teste não reflete o comportamento atual e não cobre os modos de
+`PautaNotFoundException`. O teste não refletia o comportamento atual e não cobria os modos de
 falha PF1/PF4/PF8.
 
-**Impacto**: Baixa — risco de falsa sensação de cobertura.
+**Impacto**: originalmente Baixa — corrigido; os testes de `SessaoService` acompanham a
+implementação.
 
-**Evidência**: `src/test/java/.../SessaoServiceTest.java` vs `SessaoService.saveSessao()` /
-`PautaService.getPautaById()`.
+**Evidência**: `src/test/java/.../SessaoServiceTest.java` (reativado) vs
+`SessaoService.saveSessao()` / `PautaService.getPautaById()`. "Sessão não encontrada" e "sessão
+fechada" possuem cobertura (`getOpenSessaoById*`).
 
 ---
 
@@ -360,8 +386,8 @@ falha PF1/PF4/PF8.
 | 1 | Duração 0/negativa aceita (PF1)             | `tempo_votacao_minutos` ≤ 0      | **Corrigido** — rejeitado na criação (400) | Corrigida |
 | 2 | Sem limite superior de duração              | duração muito grande             | **Corrigido** — rejeitado na criação (400) | Corrigida |
 | 3 | `POST /sessoes` sem validação               | `pauta_id` nulo/ausente          | **Corrigido** — rejeitado na entrada (400) | Corrigida |
-| 4 | 2ª sessão da pauta                          | violação R5                      | HTTP 500 em vez de 409/400                 | Alta    |
-| 5 | Corrida na criação de sessão                | duas requisições simultâneas     | HTTP 500 (integridade não traduzida)       | Média   |
+| 4 | 2ª sessão da pauta                          | violação R5                      | **Corrigido** — rejeitado com 409 Conflict | Corrigida |
+| 5 | Corrida na criação de sessão                | duas requisições simultâneas     | **Corrigido** — integridade traduzida (409) | Corrigida |
 | 6 | Divergência case-sensitive de título        | corrida com caixa variada        | Duplicidade pode escapar da constraint      | Média   |
 | 7 | Unicidade de CPF divergente (entidade/schema) | leitura/geração de DDL          | Regra ambígua; restrição futura indevida   | Baixa   |
 | 8 | CPF sem normalização                        | mesma pessoa, formatos diferentes | Voto duplicado do mesmo titular (burlou R10) | Alta    |
@@ -370,8 +396,7 @@ falha PF1/PF4/PF8.
 | 11 | `hasSessao` não exposto                     | consulta de pautas               | Necessário cruzamento com `/sessoes`       | Baixa   |
 | 12 | CPF autodeclarado (sem verificação)         | votação                          | Sem confirmação de titularidade            | Baixa   |
 | 13 | Erros 500 genéricos / mensagens mistas      | exceções não mapeadas            | Diagnóstico dificultado                    | Baixa   |
-| 14 | Testes desatualizados                       | evolução de código               | Cobertura incorreta                        | Baixa   |
+| 14 | Testes desatualizados                       | evolução de código               | **Corrigido** — `SessaoServiceTest` alinhado    | Corrigida |
 
-**Recomendação de prioridade:** tratar PF8 (burlável) e PF4 (falha comum com impacto
-de negócio e mapeamento de erro incorreto) antes dos demais itens. PF1, PF2 e PF3 estão
-corrigidos.
+**Recomendação de prioridade:** tratar PF8 (burlável) antes dos demais itens. PF1, PF2, PF3,
+PF4, PF5 e PF14 estão corrigidos.
