@@ -5,7 +5,8 @@
 Objetivo: registrar o tema que será deliberado e o tempo de votação.
 
 1. O organizador informa o **título** e o **tempo de votação em minutos**.
-2. O sistema valida a entrada: título obrigatório com 20 a 150 caracteres, duração obrigatória.
+2. O sistema valida a entrada: título obrigatório com 20 a 150 caracteres, duração obrigatória
+   entre 1 e 43200 minutos (até 30 dias).
 3. O sistema normaliza o título (remove espaços nas bordas).
 4. O sistema verifica se **já existe outra pauta com o mesmo título** (ignorando caixa).
 5. Se não houver duplicidade, a pauta é persistida (o banco reforça a unicidade do título).
@@ -13,7 +14,7 @@ Objetivo: registrar o tema que será deliberado e o tempo de votação.
 
 Resultado: pauta criada (HTTP 201).
 
-Rejeições possíveis: título inválido (400) · título duplicado (409).
+Rejeições possíveis: título inválido (400) · duração fora do intervalo 1–43200 (400) · título duplicado (409).
 
 ---
 

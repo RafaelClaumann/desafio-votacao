@@ -64,7 +64,7 @@ dessa pauta ficará aberta.
 | Campo                    | Tipo     | Regra                                      |
 | ------------------------ | -------- | ------------------------------------------ |
 | `titulo`                 | string   | Obrigatório, **20 a 150 caracteres**       |
-| `tempo_votacao_minutos`  | numero   | Obrigatório, **maior que zero**            |
+| `tempo_votacao_minutos`  | numero   | Obrigatório, **1 a 43200** (até 30 dias) |
 
 **curl:**
 
@@ -89,10 +89,14 @@ curl -X POST http://localhost:8080/pautas \
 - `400` — título fora do tamanho (20–150) ou ausente.
 - `400` — `tempo_votacao_minutos` **0 ou negativo** ("O tempo de votação deve ser maior que zero"),
   ou ausente.
+- `400` — `tempo_votacao_minutos` **acima de 43200** ("O tempo de votação não pode exceder
+  43200 minutos (30 dias)").
 - `409` — já existe uma pauta com o mesmo título (ignorando maiúsculas/minúsculas).
 
 > Os valores `0` ou negativos são **recusados** na criação da pauta (`400`), evitando que a
-> sessão dessa pauta nasça já fechada e inutilize o tema.
+> sessão dessa pauta nasça já fechada e inutilize o tema. Valores acima de **43200 minutos
+> (30 dias)** também são recusados (`400`), evitando que o cálculo de expiração da sessão
+> estoure o intervalo de datas suportado.
 
 ---
 

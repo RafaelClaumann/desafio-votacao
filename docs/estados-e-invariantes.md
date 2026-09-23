@@ -69,3 +69,6 @@ ou o banco impede a gravação.
 
 - `startedAt` da sessão = momento da criação.
 - `expiresAt` = `startedAt` + duração em minutos da pauta.
+- A duração da pauta está sempre no intervalo **1 a 43200 minutos** (validação `@Positive` +
+  `@Max(43200)` no `PautaRequestDTO`), portanto `expiresAt` nunca excede o intervalo
+  representável pelo `LocalDateTime`.

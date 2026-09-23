@@ -52,24 +52,42 @@ teste `PautaRequestDTOValidationTest`; `SessaoService.saveSessao()`
 
 ---
 
-## PF2 — Ausência de limite superior de duração (risco de overflow)
+## PF2 — (RESOLVIDO) Ausência de limite superior de duração (risco de overflow)
 
-**Gatilho**
+**Status: corrigido** — `PautaRequestDTO.tempoVotacaoMinutos` agora exige valor **no máximo
+43200 minutos (30 dias)** (`@Max`, junto do `@Positive` e `@NotNull`).
 
-`tempo_votacao_minutos` recebe um valor extremamente grande (ex.: próximo de
-`Long.MAX_VALUE`).
+**Comportamento anterior**
 
-**O que acontece**
+`tempo_votacao_minutos` recebia um valor extremamente grande (ex.: próximo de
+`Long.MAX_VALUE`), pois a entrada tinha apenas `@Positive`. Sem `@Max`, o cálculo
+`now.plusMinutes(dur)` excedia a capacidade de representação interna do `LocalDateTime`,
+resultando em erro de aritmética/`DateTimeException` → erro genérico **HTTP 500** ao abrir a
+sessão, sem mensagem de negócio.
 
-Sem `@Max`, o cálculo `now.plusMinutes(dur)` pode exceder a capacidade de representação
-interna do `LocalDateTime`, resultando em erro de aritmética/`DateTimeException` → erro
-genérico **HTTP 500** ao abrir a sessão. Não há mensagem de negócio. (O limite inferior —
-`@Positive` — já existe; o problema aqui é a ausência de limite superior.)
+**Comportamento atual**
 
-**Impacto**: Média — cenário extremo, mas a API responde 500 sem orientação.
+Valores acima de **43200 minutos (30 dias)** são **recusados na criação da pauta** (HTTP 400)
+com a mensagem "O tempo de votação não pode exceder 43200 minutos (30 dias)". Como toda duração
+persistida é ≤ 43200, o cálculo `now.plusMinutes(dur)` nunca excede o intervalo representável
+do `LocalDateTime` (30 dias é uma fração minúscula do limite suportado).
 
-**Evidência**: tipo `Long` de `tempoVotacaoMinutos`, ausência de `@Max`, uso de
-`plusMinutes(long)`.
+**Exemplo (comportamento atual)**
+
+```json
+POST /pautas
+{
+  "titulo": "Reforma estatutária do capítulo quatro",
+  "tempo_votacao_minutos": 43201
+}
+→ 400 Bad Request — "O tempo de votação não pode exceder 43200 minutos (30 dias)"
+```
+
+**Impacto**: originalmente Média — corrigido; sem impacto residual (validação na entrada).
+
+**Evidência**: `PautaRequestDTO` (`@Max tempoVotacaoMinutos`, com `@Positive` e `@NotNull`);
+teste `PautaControllerTest.save_shouldReject_whenDurationExceedsUpperLimit`;
+`SessaoService.saveSessao()` (`now.plusMinutes(dur)`).
 
 ---
 
@@ -323,7 +341,7 @@ falha PF1/PF4/PF8.
 | # | Ponto fraco / modo de falha                 | Gatilho                          | Consequência observada                     | Impacto |
 | - | ------------------------------------------- | -------------------------------- | ------------------------------------------ | ------- |
 | 1 | Duração 0/negativa aceita (PF1)             | `tempo_votacao_minutos` ≤ 0      | **Corrigido** — rejeitado na criação (400) | Corrigida |
-| 2 | Sem limite superior de duração              | duração muito grande             | Overflow → HTTP 500                        | Média   |
+| 2 | Sem limite superior de duração              | duração muito grande             | **Corrigido** — rejeitado na criação (400) | Corrigida |
 | 3 | `POST /sessoes` sem validação               | `pauta_id` nulo/ausente          | HTTP 500 em vez de 400                     | Média   |
 | 4 | 2ª sessão da pauta                          | violação R5                      | HTTP 500 em vez de 409/400                 | Alta    |
 | 5 | Corrida na criação de sessão                | duas requisições simultâneas     | HTTP 500 (integridade não traduzida)       | Média   |
@@ -338,4 +356,4 @@ falha PF1/PF4/PF8.
 | 14 | Testes desatualizados                       | evolução de código               | Cobertura incorreta                        | Baixa   |
 
 **Recomendação de prioridade:** tratar PF8 (burlável) e PF3/PF4 (falhas comuns com impacto
-de negócio e mapeamento de erro incorreto) antes dos demais itens. PF1 está corrigido.
+de negócio e mapeamento de erro incorreto) antes dos demais itens. PF1 e PF2 estão corrigidos.

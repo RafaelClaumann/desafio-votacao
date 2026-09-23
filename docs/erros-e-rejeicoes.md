@@ -40,8 +40,10 @@ Se duas requisições simultâneas passarem pela verificação ao mesmo tempo, a
 banco captura a duplicidade e o `VotoRepositoryAdapter` a converte em `DuplicatedVoteException`
 → **HTTP 409**. O mesmo tratamento de integridade existe para o título da pauta.
 
-### Duração da votação inválida (0 ou negativa)
+### Duração da votação inválida (≤ 0 ou acima de 43200 minutos)
 
-Não há validação de positividade. O banco aceita o valor e a sessão nasce **já fechada**
-(expiração igual ou anterior ao início), portanto nunca aceita votos. Não há erro explícito —
-a operação "sucede" com uma sessão sem efeito prático.
+A duração é validada na criação da pauta: deve ser **maior que zero** (`@Positive`) e **no
+máximo 43200 minutos / 30 dias** (`@Max`). Valores `0`/negativos fariam a sessão nascer **já
+fechada** (expiração igual ou anterior ao início); valores acima do teto estourariam o
+intervalo de datas no cálculo de expiração. Ambos os casos são recusados com **HTTP 400** na
+criação da pauta, com a mensagem de Bean Validation correspondente.

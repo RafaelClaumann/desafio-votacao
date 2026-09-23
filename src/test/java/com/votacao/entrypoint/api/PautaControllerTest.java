@@ -73,6 +73,22 @@ class PautaControllerTest {
         verify(service, never()).savePauta(any());
     }
 
+    @ParameterizedTest
+    @ValueSource(longs = {43201L, Long.MAX_VALUE})
+    @DisplayName("Should reject with 400 when the duration exceeds the upper limit")
+    void save_shouldReject_whenDurationExceedsUpperLimit(long tempoVotacaoMinutos) throws Exception {
+        mockMvc.perform(post("/pautas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonBody(tempoVotacaoMinutos)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Erro de validação"))
+                .andExpect(jsonPath("$.field_errors[0].field").value("tempoVotacaoMinutos"))
+                .andExpect(jsonPath("$.field_errors[0].message")
+                        .value("O tempo de votação não pode exceder 43200 minutos (30 dias)"));
+
+        verify(service, never()).savePauta(any());
+    }
+
     @Test
     @DisplayName("Should reject with 400 when the duration is missing")
     void save_shouldReject_whenDurationIsNull() throws Exception {

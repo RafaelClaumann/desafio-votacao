@@ -131,14 +131,17 @@ pelo tempo configurado.
 
 **Violação**
 
-A duração é **validada como valor maior que zero** (`@Positive`) já na criação da pauta. Com
-duração `0` ou negativa, a pauta é recusada (HTTP 400) — portanto não é possível abrir sessão
-com duração inválida nem criar uma sessão que já nasça fechada por esse motivo (PF1 corrigido,
-ver [pontos-fracos-e-falhas.md](pontos-fracos-e-falhas.md)).
+A duração é **validada como valor entre 1 e 43200 minutos** (`@Positive` + `@Max(43200)`)
+já na criação da pauta. Com duração `0` ou negativa, a pauta é recusada (HTTP 400) — portanto
+não é possível abrir sessão com duração inválida nem criar uma sessão que já nasça fechada por
+esse motivo (PF1 corrigido, ver
+[pontos-fracos-e-falhas.md](pontos-fracos-e-falhas.md)). Com duração acima de **43200 minutos
+(30 dias)**, a pauta também é recusada (HTTP 400) — o limite impede que `now.plusMinutes(dur)`
+exceda o intervalo representável do `LocalDateTime` ao abrir a sessão (PF2 corrigido).
 
 **Implementação**
 
-`PautaRequestDTO` (`@Positive tempoVotacaoMinutos`, com `@NotNull`);
+`PautaRequestDTO` (`@Positive` + `@Max` em `tempoVotacaoMinutos`, com `@NotNull`);
 `SessaoService.saveSessao()` = `LocalDateTime.now().plusMinutes(pauta.tempoVotacaoMinutos())`.
 
 ## Votação
