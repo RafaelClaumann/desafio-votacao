@@ -54,6 +54,12 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Version:** \`${{ steps.meta.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
 
+      - name: Setup JDK
+        uses: actions/setup-java@v6
+        with:
+          java-version-file: .sdkmanrc
+          cache: 'maven'
+
       - name: Build Target JAR
         run: ./mvnw -B clean package -DskipTests
 
