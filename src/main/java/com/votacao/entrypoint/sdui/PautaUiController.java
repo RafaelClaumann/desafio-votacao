@@ -4,6 +4,7 @@ import com.votacao.application.model.Pauta;
 import com.votacao.application.service.PautaService;
 import com.votacao.application.service.query.PautaComStatus;
 import com.votacao.entrypoint.api.dto.PautaRequestDTO;
+import com.votacao.entrypoint.mapper.PautaMapper;
 import com.votacao.entrypoint.sdui.components.UiComponents;
 import com.votacao.entrypoint.sdui.screens.PautaScreen;
 import org.springframework.http.ResponseEntity;
@@ -19,9 +20,11 @@ import java.util.List;
 public class PautaUiController {
 
     private final PautaService service;
+    private final PautaMapper mapper;
 
-    public PautaUiController(PautaService service) {
+    public PautaUiController(PautaService service, PautaMapper mapper) {
         this.service = service;
+        this.mapper = mapper;
     }
 
     @PostMapping("/form")
@@ -32,7 +35,7 @@ public class PautaUiController {
 
     @PostMapping("/action")
     public ResponseEntity<UiComponents.TelaSelecao> createPauta(@RequestBody PautaRequestDTO requestBody) {
-        Pauta domain = PautaRequestDTO.toDomain(requestBody);
+        Pauta domain = mapper.toDomain(requestBody);
         service.savePauta(domain);
 
         List<PautaComStatus> queryResult = service.pautaComStatuses();

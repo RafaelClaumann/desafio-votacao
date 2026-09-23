@@ -3,6 +3,8 @@ package com.votacao.entrypoint.api;
 import com.votacao.application.model.Pauta;
 import com.votacao.application.service.PautaService;
 import com.votacao.entrypoint.api.dto.PautaRequestDTO;
+import com.votacao.entrypoint.api.dto.PautaResponseDTO;
+import com.votacao.entrypoint.mapper.PautaMapper;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,14 +22,16 @@ import java.util.List;
 public class PautaController {
 
     private final PautaService service;
+    private final PautaMapper mapper;
 
-    public PautaController(PautaService service) {
+    public PautaController(PautaService service, PautaMapper mapper) {
         this.service = service;
+        this.mapper = mapper;
     }
 
     @PostMapping
-    public ResponseEntity<PautaRequestDTO> save(@RequestBody @Valid final PautaRequestDTO requestBody) {
-        Pauta domain = PautaRequestDTO.toDomain(requestBody);
+    public ResponseEntity<PautaResponseDTO> save(@RequestBody @Valid final PautaRequestDTO requestBody) {
+        Pauta domain = mapper.toDomain(requestBody);
         Pauta saved = service.savePauta(domain);
 
         URI location = ServletUriComponentsBuilder
@@ -36,13 +40,13 @@ public class PautaController {
                 .buildAndExpand(saved.id())
                 .toUri();
 
-        return ResponseEntity.created(location).body(PautaRequestDTO.fromDomain(saved));
+        return ResponseEntity.created(location).body(mapper.toResponse(saved));
     }
 
     @GetMapping
-    public ResponseEntity<List<PautaRequestDTO>> fetch() {
+    public ResponseEntity<List<PautaResponseDTO>> fetch() {
         List<Pauta> pautas = service.getPautas();
-        return ResponseEntity.ok(PautaRequestDTO.toDTOList(pautas));
+        return ResponseEntity.ok(mapper.toResponseList(pautas));
     }
 
 }
