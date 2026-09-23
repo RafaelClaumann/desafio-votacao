@@ -102,7 +102,7 @@ Registrar a manifestação de um associado em uma sessão aberta.
 | Campo          | Tipo    | Regra                              |
 | -------------- | ------- | ---------------------------------- |
 | `id_sessao`      | inteiro | Obrigatório                        |
-| `documento`      | texto   | Obrigatório, CPF válido            |
+| `documento`      | texto   | Obrigatório, CPF válido (com ou sem pontuação); normalizado para somente dígitos |
 | `escolha_voto`   | enum    | Obrigatório, `SIM` ou `NAO`        |
 
 **Regras de negócio**
@@ -112,7 +112,8 @@ R11 (escolha SIM ou NÃO).
 
 **Sucesso**
 
-HTTP 201 — voto registrado; o corpo reflete `id_sessao`, `documento` e `escolha_voto`.
+HTTP 201 — voto registrado; o corpo reflete `id_sessao`, `documento` (normalizado, somente
+dígitos) e `escolha_voto`.
 
 **Erros**
 

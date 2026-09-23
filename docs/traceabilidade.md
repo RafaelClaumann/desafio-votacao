@@ -113,9 +113,10 @@ Observações:
    `(sessao_id, documento)` — mesma regra nome/filhos do `schema.sql`/`init.sql`. `documento`
    deixou de ter `unique = true` (que sugeriria unicidade global do CPF). A regra efetiva é
    **um voto por CPF por sessão**: o mesmo CPF pode votar em sessões diferentes.
-5. **CPF sem normalização.** O documento chega à persistência sem formatação canônica.
-   O mesmo CPF numérico com formatações diferentes seria armazenado/comparado como valores
-   distintos (relevante para a unicidade de R10).
+5. **CPF normalizado (PF8 resolvido).** `VotoService.votar()` reduz o documento a somente
+   dígitos antes da verificação de R10 e da persistência. Os formatos com e sem pontuação são
+   armazenados de forma canônica (11 dígitos), tornando a unicidade `(sessao_id, documento)`
+   imune à variação de formatação.
 6. **Testes de `SessaoService` alinhados.** `SessaoServiceTest` está ativo e cobre
    `PautaNotFoundException`, `DuplicatedSessaoException` e a criação bem-sucedida, de acordo
    com a implementação atual.
