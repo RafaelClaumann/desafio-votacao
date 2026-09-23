@@ -38,4 +38,9 @@ public class PautaRepositoryAdapter implements PautaRepository {
         return repository.findById(pautaId).map(mapper::toDomain);
     }
 
+    @Override
+    public boolean existsByTituloIgnoreCase(String titulo) {
+        return repository.existsByTituloIgnoreCase(titulo);
+    }
+
 }

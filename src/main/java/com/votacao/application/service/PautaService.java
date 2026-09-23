@@ -3,6 +3,7 @@ package com.votacao.application.service;
 import com.votacao.application.gateway.PautaRepository;
 import com.votacao.application.gateway.SessaoRepository;
 import com.votacao.application.model.Pauta;
+import com.votacao.application.model.exception.DuplicatedPautaException;
 import com.votacao.application.model.exception.PautaNotFoundException;
 import com.votacao.application.service.query.PautaComStatus;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,9 @@ public class PautaService {
     }
 
     public Pauta savePauta(final Pauta pauta) {
+        if (repository.existsByTituloIgnoreCase(pauta.titulo())) {
+            throw new DuplicatedPautaException(pauta.titulo());
+        }
         return repository.save(pauta);
     }
 

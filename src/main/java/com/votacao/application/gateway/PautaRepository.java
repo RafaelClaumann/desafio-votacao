@@ -13,4 +13,6 @@ public interface PautaRepository {
 
     Optional<Pauta> findById(Long pautaId);
 
+    boolean existsByTituloIgnoreCase(String titulo);
+
 }
