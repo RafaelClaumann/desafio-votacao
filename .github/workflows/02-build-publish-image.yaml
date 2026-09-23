@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-image:
-    name: Build Image
+    name: Build and Publish Image
     runs-on: ubuntu-latest
     permissions:
       contents: read
