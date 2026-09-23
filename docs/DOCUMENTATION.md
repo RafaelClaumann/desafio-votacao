@@ -75,5 +75,5 @@ execução pela comparação do horário atual com o horário de expiração.
   entre votos SIM e NÃO registrados. Uma sessão fechada sem nenhum voto resulta em **EMPATE**
   (0 × 0).
 - Não existe conceito de abstenção: todo voto registrado é obrigatoriamente SIM ou NÃO.
-- A duração de votação **não é validada como valor positivo**; valores 0 ou negativos
-  produzem uma sessão que já nasce fechada (ver R6 em [regras-de-negocio.md](regras-de-negocio.md)).
+- A duração de votação **é validada como valor positivo** na criação da pauta; valores `0` ou
+  negativos são recusados com HTTP 400 (ver R6 em [regras-de-negocio.md](regras-de-negocio.md)).

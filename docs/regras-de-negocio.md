@@ -129,15 +129,17 @@ A sessão passa a valer a partir de **agora** e tem como expiração **agora + d
 votação (em minutos) definida na pauta**. Se a duração for positiva, a sessão fica aberta
 pelo tempo configurado.
 
-**Violação (ausência de regra)**
+**Violação**
 
-A duração **não é validada como valor positivo**. Com duração `0` ou negativa, a expiração é
-igual ou anterior ao início, e a sessão **já nasce fechada** — ela nunca chega a aceitar votos
-(ver [estados-e-invariantes.md](estados-e-invariantes.md)).
+A duração é **validada como valor maior que zero** (`@Positive`) já na criação da pauta. Com
+duração `0` ou negativa, a pauta é recusada (HTTP 400) — portanto não é possível abrir sessão
+com duração inválida nem criar uma sessão que já nasça fechada por esse motivo (PF1 corrigido,
+ver [pontos-fracos-e-falhas.md](pontos-fracos-e-falhas.md)).
 
 **Implementação**
 
-`SessaoService.saveSessao()` usa `LocalDateTime.now().plusMinutes(pauta.tempoVotacaoMinutos())`.
+`PautaRequestDTO` (`@Positive tempoVotacaoMinutos`, com `@NotNull`);
+`SessaoService.saveSessao()` = `LocalDateTime.now().plusMinutes(pauta.tempoVotacaoMinutos())`.
 
 ## Votação
 

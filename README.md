@@ -64,7 +64,7 @@ dessa pauta ficará aberta.
 | Campo                    | Tipo     | Regra                                      |
 | ------------------------ | -------- | ------------------------------------------ |
 | `titulo`                 | string   | Obrigatório, **20 a 150 caracteres**       |
-| `tempo_votacao_minutos`  | numero   | Obrigatório                                |
+| `tempo_votacao_minutos`  | numero   | Obrigatório, **maior que zero**            |
 
 **curl:**
 
@@ -87,11 +87,12 @@ curl -X POST http://localhost:8080/pautas \
 **Erros:**
 
 - `400` — título fora do tamanho (20–150) ou ausente.
+- `400` — `tempo_votacao_minutos` **0 ou negativo** ("O tempo de votação deve ser maior que zero"),
+  ou ausente.
 - `409` — já existe uma pauta com o mesmo título (ignorando maiúsculas/minúsculas).
 
-> **Atenção:** a duração **não é validada como positiva**. Com `0` ou negativo, a sessão desta pauta
-> já nascerá **fechada** e a pauta ficará inutilizável (não é possível abrir outra sessão).
-> Recomendado: usar sempre valores positivos.
+> Os valores `0` ou negativos são **recusados** na criação da pauta (`400`), evitando que a
+> sessão dessa pauta nasça já fechada e inutilize o tema.
 
 ---
 
@@ -300,13 +301,13 @@ Toda resposta de erro segue o formato:
   "error": "Bad Request",
   "message": "mensagem do erro",
   "path": "/votos",
-  "fieldErrors": [
+  "field_errors": [
     { "field": "documento", "message": "O documento é obrigatório" }
   ]
 }
 ```
 
-- `fieldErrors` é preenchido apenas em erros de validação (`400`).
+- `field_errors` é preenchido apenas em erros de validação (`400`).
 - Erros de negócio retornam 400/409 (ver descrito em cada operação); falhas não previstas
   retornam `500`.
 
