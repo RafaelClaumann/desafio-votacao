@@ -108,11 +108,11 @@ Observações:
 3. **`pautaComStatuses()` não exposto.** O serviço `PautaService.pautaComStatuses()` calcula
    o indicador `hasSessao` (se a pauta já possui sessão), mas **nenhum controller o utiliza**;
    `GET /pautas` retorna apenas id/título/duração.
-4. **Unicidade do documento divergente entre entidade e schema.** `VotoEntity` declara
-   `@Column(unique = true, length = 14)` em `documento` (sugeriria unicidade global do CPF em
-   todo o sistema), mas o `schema.sql` aplica unicidade por par `(sessao_id, documento)`, e a
-   verificação de negócio (`existsBySessaoIdAndDocumento`) também é por sessão. A regra efetiva
-   é **um CPF por sessão**, e a anotação de entidade diverge do schema aplicado.
+4. **Unicidade do voto declarada na entidade (PF7 resolvido).** `VotoEntity` declara a
+   constraint composta `uk_voto_sessao_documento` em `@Table(uniqueConstraints = ...)`, com
+   `(sessao_id, documento)` — mesma regra nome/filhos do `schema.sql`/`init.sql`. `documento`
+   deixou de ter `unique = true` (que sugeriria unicidade global do CPF). A regra efetiva é
+   **um voto por CPF por sessão**: o mesmo CPF pode votar em sessões diferentes.
 5. **CPF sem normalização.** O documento chega à persistência sem formatação canônica.
    O mesmo CPF numérico com formatações diferentes seria armazenado/comparado como valores
    distintos (relevante para a unicidade de R10).

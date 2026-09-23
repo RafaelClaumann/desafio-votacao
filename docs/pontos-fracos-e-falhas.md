@@ -236,26 +236,35 @@ teste `PautaRepositoryAdapterITTest.save_shouldReject_whenTitleDiffersOnlyByCase
 
 ---
 
-## PF7 — Unicidade do CPF declarada de forma divergente entre entidade e schema
+## PF7 — (RESOLVIDO) Unicidade do CPF declarada de forma divergente entre entidade e schema
 
-**Gatilho**
+**Status: corrigido** — `VotoEntity` não declara mais unicidade global do documento; a
+entidade passou a declarar a **constraint composta correta** `uk_voto_sessao_documento`
+(`(sessao_id, documento)`), com o mesmo nome do schema.
 
-Leitura/manutenção do código ou mudança de geração de DDL da entidade.
-
-**O que acontece**
+**Comportamento anterior**
 
 - `VotoEntity` declara `@Column(unique = true)` em `documento` (sugeriria **um único voto do CPF
   em todo o sistema**).
 - O `schema.sql` aplica unicidade por par `(sessao_id, documento)` — e a regra de negócio
   (R10) é **um voto por CPF por sessão**.
-- Com `ddl-auto=validate` + `schema.sql`, a regra efetiva é a do schema (por sessão). A
-  anotação da entidade é contraditória e, se algum dia a DDL for gerada automaticamente,
-  poderia impor uma regra mais restritiva do que a documentada.
+- Com `ddl-auto=validate` + `schema.sql`, a regra efetiva era a do schema (por sessão). A
+  anotação da entidade era contraditória e, se a DDL fosse gerada automaticamente, poderia
+  impor uma regra mais restritiva do que a documentada.
 
-**Impacto**: Baixa — ambiguidade que não altera o comportamento atual, mas é armadilha futura.
+**Comportamento atual**
 
-**Evidência**: `VotoEntity.documento` (`unique = true`), `schema.sql`
-(`uk_voto_sessao_documento`), `VotoService.votar()` (check por sessão).
+A entidade é consistente com o schema e com a regra R10: o mesmo CPF pode votar em **diferentes
+sessões**, mas apenas **uma vez por sessão**. A unidade da regra é o par `(sessao_id, documento)`
+(`@Table` com `@UniqueConstraint uk_voto_sessao_documento`), alinhado ao `schema.sql`/`init.sql`.
+
+**Impacto**: originalmente Baixa — corrigido; sem ambiguidade residual.
+
+**Evidência**: `VotoEntity` (`@Table(uniqueConstraints = @UniqueConstraint(name =
+"uk_voto_sessao_documento", columnNames = {sessao_id, documento}))`, `@Column(length = 14)` sem
+`unique`), `schema.sql` (`uk_voto_sessao_documento`), `VotoService.votar()` (check por sessão);
+teste `VotoRepositoryAdapterITTest.save_shouldAllowSameDocumentoInDifferentSessions` e
+`save_shouldReject_whenDocumentoAlreadyVotedInSession`.
 
 ---
 
@@ -407,7 +416,7 @@ fechada" possuem cobertura (`getOpenSessaoById*`).
 | 4 | 2ª sessão da pauta                          | violação R5                      | **Corrigido** — rejeitado com 409 Conflict | Corrigida |
 | 5 | Corrida na criação de sessão                | duas requisições simultâneas     | **Corrigido** — integridade traduzida (409) | Corrigida |
 | 6 | Divergência case-sensitive de título        | corrida com caixa variada        | **Corrigido** — índice único `LOWER(titulo)` | Corrigida |
-| 7 | Unicidade de CPF divergente (entidade/schema) | leitura/geração de DDL          | Regra ambígua; restrição futura indevida   | Baixa   |
+| 7 | Unicidade de CPF divergente (entidade/schema) | leitura/geração de DDL          | **Corrigido** — entidade declara `uk_voto_sessao_documento` | Corrigida |
 | 8 | CPF sem normalização                        | mesma pessoa, formatos diferentes | Voto duplicado do mesmo titular (burlou R10) | Alta    |
 | 9 | Fechamento depende do relógio local         | cluster/desvio de clock          | Fronteiras de exclusão divergentes         | Média   |
 | 10 | Sessão sem votos → EMPATE                   | zero participação                | Empate silencioso                          | Baixa   |
@@ -417,4 +426,4 @@ fechada" possuem cobertura (`getOpenSessaoById*`).
 | 14 | Testes desatualizados                       | evolução de código               | **Corrigido** — `SessaoServiceTest` alinhado    | Corrigida |
 
 **Recomendação de prioridade:** tratar PF8 (burlável) antes dos demais itens. PF1, PF2, PF3,
-PF4, PF5, PF6 e PF14 estão corrigidos.
+PF4, PF5, PF6, PF7 e PF14 estão corrigidos.
