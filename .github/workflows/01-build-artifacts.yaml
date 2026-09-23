@@ -35,12 +35,9 @@ jobs:
           --threads 2C \
           --file pom.xml
 
-      - name: Publish reports
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Check coverage
+        uses: cicirello/jacoco-badge-generator@v2
         with:
-          name: reports
-          path: |
-            target/surefire-reports/
-            target/site/jacoco/
-          retention-days: 1
+          jacoco-csv-file: target/site/jacoco/jacoco.csv
+          min-coverage: 80
+          fail-if-coverage-less-than: true
