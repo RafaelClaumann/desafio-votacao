@@ -22,13 +22,14 @@ public class VotoService {
 
     @Transactional
     public Voto votar(Long idSessao, String documento, Voto.Escolha escolhaVoto) {
+        String documentoNormalizado = normalizarDocumento(documento);
         Sessao sessao = sessaoService.getOpenSessaoById(idSessao);
 
-        if (votoRepository.existsBySessaoIdAndDocumento(idSessao, documento)) {
-            throw new DuplicatedVoteException(idSessao, documento);
+        if (votoRepository.existsBySessaoIdAndDocumento(idSessao, documentoNormalizado)) {
+            throw new DuplicatedVoteException(idSessao, documentoNormalizado);
         }
 
-        Voto voto = new Voto(null, sessao, documento, escolhaVoto);
+        Voto voto = new Voto(null, sessao, documentoNormalizado, escolhaVoto);
         return votoRepository.save(voto);
     }
 
@@ -41,6 +42,10 @@ public class VotoService {
                         votoRepository.countBySessaoIdAndEscolha(idSessao, Voto.Escolha.NAO)
                 )
         );
+    }
+
+    private static String normalizarDocumento(String documento) {
+        return documento.replaceAll("\\D", "");
     }
 
 }
