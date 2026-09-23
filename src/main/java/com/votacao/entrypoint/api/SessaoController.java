@@ -6,6 +6,7 @@ import com.votacao.application.service.VotoService;
 import com.votacao.application.service.query.ApuracaoSessao;
 import com.votacao.entrypoint.api.dto.ResultadoVotacaoResponse;
 import com.votacao.entrypoint.api.dto.SessaoDTO;
+import com.votacao.entrypoint.api.dto.SessaoResponseDTO;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,7 +32,7 @@ public class SessaoController {
     }
 
     @PostMapping
-    public ResponseEntity<SessaoDTO> save(@RequestBody final SessaoDTO requestBody) {
+    public ResponseEntity<SessaoResponseDTO> save(@RequestBody final SessaoDTO requestBody) {
         Sessao saved = service.saveSessao(requestBody.pautaId());
 
         URI location = ServletUriComponentsBuilder
@@ -40,13 +41,13 @@ public class SessaoController {
                 .buildAndExpand(saved.id())
                 .toUri();
 
-        return ResponseEntity.created(location).body(SessaoDTO.fromDomain(saved));
+        return ResponseEntity.created(location).body(SessaoResponseDTO.fromDomain(saved));
     }
 
     @GetMapping
-    public ResponseEntity<List<SessaoDTO>> fetch() {
+    public ResponseEntity<List<SessaoResponseDTO>> fetch() {
         List<Sessao> sessoes = service.getSessoes();
-        return ResponseEntity.ok(SessaoDTO.toDTOList(sessoes));
+        return ResponseEntity.ok(SessaoResponseDTO.toDTOList(sessoes));
     }
 
     @GetMapping("/{idSessao}/resultado")

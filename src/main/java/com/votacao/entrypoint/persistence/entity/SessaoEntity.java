@@ -23,7 +23,7 @@ public class SessaoEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne
     @JoinColumn(name = "pauta_id", nullable = false)
     private PautaEntity pauta;
 
