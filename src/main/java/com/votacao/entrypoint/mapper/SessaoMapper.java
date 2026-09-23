@@ -4,13 +4,18 @@ import com.votacao.application.model.Sessao;
 import com.votacao.application.service.query.ApuracaoSessao;
 import com.votacao.entrypoint.api.dto.ResultadoVotacaoResponse;
 import com.votacao.entrypoint.api.dto.SessaoResponseDTO;
+import com.votacao.entrypoint.persistence.entity.SessaoEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 import java.util.List;
 
 @Mapper(componentModel = "spring")
-public interface SessaoResponseMapper {
+public interface SessaoMapper {
+
+    SessaoEntity toEntity(Sessao sessao);
+
+    Sessao toDomain(SessaoEntity entity);
 
     @Mapping(target = "idSessao", source = "id")
     @Mapping(target = "idPauta", source = "pauta.id")

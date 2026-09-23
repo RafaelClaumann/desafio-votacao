@@ -7,7 +7,7 @@ import com.votacao.application.service.query.ApuracaoSessao;
 import com.votacao.entrypoint.api.dto.ResultadoVotacaoResponse;
 import com.votacao.entrypoint.api.dto.SessaoDTO;
 import com.votacao.entrypoint.api.dto.SessaoResponseDTO;
-import com.votacao.entrypoint.mapper.SessaoResponseMapper;
+import com.votacao.entrypoint.mapper.SessaoMapper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,9 +26,9 @@ public class SessaoController {
 
     private final SessaoService service;
     private final VotoService votoService;
-    private final SessaoResponseMapper mapper;
+    private final SessaoMapper mapper;
 
-    public SessaoController(SessaoService service, VotoService votoService, SessaoResponseMapper mapper) {
+    public SessaoController(SessaoService service, VotoService votoService, SessaoMapper mapper) {
         this.service = service;
         this.votoService = votoService;
         this.mapper = mapper;

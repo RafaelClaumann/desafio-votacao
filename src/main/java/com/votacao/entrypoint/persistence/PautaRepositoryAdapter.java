@@ -2,6 +2,7 @@ package com.votacao.entrypoint.persistence;
 
 import com.votacao.application.gateway.PautaRepository;
 import com.votacao.application.model.Pauta;
+import com.votacao.entrypoint.mapper.PautaMapper;
 import com.votacao.entrypoint.persistence.entity.PautaEntity;
 import com.votacao.entrypoint.persistence.jpa.SpringDataPautaRepository;
 import org.springframework.stereotype.Component;
@@ -13,26 +14,28 @@ import java.util.Optional;
 public class PautaRepositoryAdapter implements PautaRepository {
 
     private final SpringDataPautaRepository repository;
+    private final PautaMapper mapper;
 
-    public PautaRepositoryAdapter(SpringDataPautaRepository repository) {
+    public PautaRepositoryAdapter(SpringDataPautaRepository repository, PautaMapper mapper) {
         this.repository = repository;
+        this.mapper = mapper;
     }
 
     @Override
     public Pauta save(Pauta pauta) {
-        PautaEntity saved = repository.save(PautaEntity.fromDomain(pauta));
-        return PautaEntity.fromEntity(saved);
+        PautaEntity saved = repository.save(mapper.toEntity(pauta));
+        return mapper.toDomain(saved);
     }
 
     @Override
     public List<Pauta> getPautas() {
         final List<PautaEntity> entities = repository.findAll();
-        return entities.stream().map(PautaEntity::fromEntity).toList();
+        return entities.stream().map(mapper::toDomain).toList();
     }
 
     @Override
     public Optional<Pauta> findById(Long pautaId) {
-        return repository.findById(pautaId).map(PautaEntity::fromEntity);
+        return repository.findById(pautaId).map(mapper::toDomain);
     }
 
 }

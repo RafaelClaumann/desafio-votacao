@@ -36,22 +36,4 @@ public class VotoEntity {
     @Column(nullable = false)
     private Voto.Escolha escolhaVoto;
 
-    public static VotoEntity fromDomain(Voto voto) {
-        VotoEntity votoEntity = new VotoEntity();
-        votoEntity.setId(voto.id());
-        votoEntity.setSessao(SessaoEntity.fromDomain(voto.sessao()));
-        votoEntity.setDocumento(voto.documento());
-        votoEntity.setEscolhaVoto(voto.escolhaVoto());
-        return votoEntity;
-    }
-
-    public static Voto fromEntity(VotoEntity saved) {
-        return new Voto(
-                saved.getId(),
-                SessaoEntity.fromEntity(saved.getSessao()),
-                saved.getDocumento(),
-                Voto.Escolha.valueOf(saved.getEscolhaVoto().name())
-        );
-    }
-
 }
