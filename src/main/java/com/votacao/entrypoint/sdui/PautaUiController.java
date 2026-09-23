@@ -3,7 +3,7 @@ package com.votacao.entrypoint.sdui;
 import com.votacao.application.model.Pauta;
 import com.votacao.application.service.PautaService;
 import com.votacao.application.service.query.PautaComStatus;
-import com.votacao.entrypoint.api.dto.PautaDTO;
+import com.votacao.entrypoint.api.dto.PautaRequestDTO;
 import com.votacao.entrypoint.sdui.components.UiComponents;
 import com.votacao.entrypoint.sdui.screens.PautaScreen;
 import org.springframework.http.ResponseEntity;
@@ -31,8 +31,8 @@ public class PautaUiController {
     }
 
     @PostMapping("/action")
-    public ResponseEntity<UiComponents.TelaSelecao> createPauta(@RequestBody PautaDTO requestBody) {
-        Pauta domain = PautaDTO.toDomain(requestBody);
+    public ResponseEntity<UiComponents.TelaSelecao> createPauta(@RequestBody PautaRequestDTO requestBody) {
+        Pauta domain = PautaRequestDTO.toDomain(requestBody);
         service.savePauta(domain);
 
         List<PautaComStatus> queryResult = service.pautaComStatuses();

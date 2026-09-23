@@ -2,7 +2,7 @@ package com.votacao.entrypoint.api;
 
 import com.votacao.application.model.Pauta;
 import com.votacao.application.service.PautaService;
-import com.votacao.entrypoint.api.dto.PautaDTO;
+import com.votacao.entrypoint.api.dto.PautaRequestDTO;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,8 +26,8 @@ public class PautaController {
     }
 
     @PostMapping
-    public ResponseEntity<PautaDTO> save(@RequestBody @Valid final PautaDTO requestBody) {
-        Pauta domain = PautaDTO.toDomain(requestBody);
+    public ResponseEntity<PautaRequestDTO> save(@RequestBody @Valid final PautaRequestDTO requestBody) {
+        Pauta domain = PautaRequestDTO.toDomain(requestBody);
         Pauta saved = service.savePauta(domain);
 
         URI location = ServletUriComponentsBuilder
@@ -36,13 +36,13 @@ public class PautaController {
                 .buildAndExpand(saved.id())
                 .toUri();
 
-        return ResponseEntity.created(location).body(PautaDTO.fromDomain(saved));
+        return ResponseEntity.created(location).body(PautaRequestDTO.fromDomain(saved));
     }
 
     @GetMapping
-    public ResponseEntity<List<PautaDTO>> fetch() {
+    public ResponseEntity<List<PautaRequestDTO>> fetch() {
         List<Pauta> pautas = service.getPautas();
-        return ResponseEntity.ok(PautaDTO.toDTOList(pautas));
+        return ResponseEntity.ok(PautaRequestDTO.toDTOList(pautas));
     }
 
 }
