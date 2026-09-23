@@ -17,7 +17,6 @@ public interface SessaoMapper {
 
     Sessao toDomain(SessaoEntity entity);
 
-    @Mapping(target = "idSessao", source = "id")
     @Mapping(target = "idPauta", source = "pauta.id")
     @Mapping(target = "isOpen", expression = "java(sessao.isOpen(java.time.LocalDateTime.now()))")
     SessaoResponseDTO toDTO(Sessao sessao);
