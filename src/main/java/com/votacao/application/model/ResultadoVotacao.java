@@ -6,8 +6,10 @@ public record ResultadoVotacao(long totalVotosSim, long totalVotosNao) {
         return totalVotosSim + totalVotosNao;
     }
 
-    public boolean aprovada() {
-        return totalVotosSim > totalVotosNao;
+    public StatusVotacao status() {
+        if (totalVotosSim > totalVotosNao) return StatusVotacao.APROVADA;
+        if (totalVotosSim < totalVotosNao) return StatusVotacao.REJEITADA;
+        return StatusVotacao.EMPATE;
     }
 
 }
