@@ -92,6 +92,6 @@ jobs:
       - name: Publish Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: docker-image-${{ github.ref_name }}
+          name: docker-image-${{ replace(github.ref_name, '/', '-') }}
           path: app-image.tar
           retention-days: 1
