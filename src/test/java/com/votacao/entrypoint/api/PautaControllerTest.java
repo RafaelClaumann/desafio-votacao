@@ -40,7 +40,7 @@ class PautaControllerTest {
     private PautaMapper mapper;
 
     @Test
-    @DisplayName("Deve criar a pauta quando a duração é positiva")
+    @DisplayName("Should create the pauta when the duration is positive")
     void save_shouldCreatePauta_whenDurationIsPositive() throws Exception {
         Pauta domain = new Pauta(null, TITULO, 10L);
         Pauta saved = new Pauta(1L, TITULO, 10L);
@@ -60,7 +60,7 @@ class PautaControllerTest {
 
     @ParameterizedTest
     @ValueSource(longs = {0L, -5L})
-    @DisplayName("Deve rejeitar com 400 quando a duração é menor ou igual a zero")
+    @DisplayName("Should reject with 400 when the duration is less than or equal to zero")
     void save_shouldReject_whenDurationIsNotPositive(long tempoVotacaoMinutos) throws Exception {
         mockMvc.perform(post("/pautas")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -74,7 +74,7 @@ class PautaControllerTest {
     }
 
     @Test
-    @DisplayName("Deve rejeitar com 400 quando a duração é ausente")
+    @DisplayName("Should reject with 400 when the duration is missing")
     void save_shouldReject_whenDurationIsNull() throws Exception {
         mockMvc.perform(post("/pautas")
                         .contentType(MediaType.APPLICATION_JSON)
