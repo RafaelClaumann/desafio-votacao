@@ -6,6 +6,7 @@ on:
     branches:
       - 'feature/**'
       - 'feat/**'
+      - 'fix/**'
 
 jobs:
   open-pr:
