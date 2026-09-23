@@ -2,7 +2,10 @@ name: '[CI] Build Application'
 run-name: "Build · ${{ github.ref_name }}"
 on:
   push:
-    branches: [ 'feature/**', 'feat/**' ]
+    branches:
+      - 'feature/**'
+      - 'feat/**'
+      - 'fix/**'
 
 jobs:
   build:
