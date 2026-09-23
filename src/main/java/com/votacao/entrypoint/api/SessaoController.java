@@ -3,7 +3,7 @@ package com.votacao.entrypoint.api;
 import com.votacao.application.model.Sessao;
 import com.votacao.application.service.SessaoService;
 import com.votacao.application.service.VotoService;
-import com.votacao.application.service.query.ResultadoVotosSessao;
+import com.votacao.application.service.query.ApuracaoSessao;
 import com.votacao.entrypoint.api.dto.ResultadoVotacaoResponse;
 import com.votacao.entrypoint.api.dto.SessaoDTO;
 import org.springframework.http.ResponseEntity;
@@ -50,9 +50,9 @@ public class SessaoController {
     }
 
     @GetMapping("/{idSessao}/resultado")
-    public ResponseEntity<ResultadoVotacaoResponse> test(@PathVariable long idSessao) {
-        ResultadoVotosSessao resultado = votoService.apurarVotosSessao(idSessao);
-        return ResponseEntity.ok(ResultadoVotacaoResponse.from(resultado));
+    public ResponseEntity<ResultadoVotacaoResponse> apurar(@PathVariable long idSessao) {
+        ApuracaoSessao resultado = votoService.apurarVotosSessao(idSessao);
+        return ResponseEntity.ok(ResultadoVotacaoResponse.fromDomain(resultado));
     }
 
 }

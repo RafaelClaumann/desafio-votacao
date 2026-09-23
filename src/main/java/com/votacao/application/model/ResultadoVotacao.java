@@ -1,10 +1,6 @@
-package com.votacao.application.service.query;
+package com.votacao.application.model;
 
-public record ResultadoVotosSessao(
-        long idSessao,
-        long totalVotosSim,
-        long totalVotosNao
-) {
+public record ResultadoVotacao(long totalVotosSim, long totalVotosNao) {
 
     public long totalVotos() {
         return totalVotosSim + totalVotosNao;
