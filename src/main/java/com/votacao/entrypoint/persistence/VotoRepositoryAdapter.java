@@ -35,8 +35,7 @@ public class VotoRepositoryAdapter implements VotoRepository {
 
     @Override
     public long countBySessaoIdAndEscolha(Long sessaoId, Voto.Escolha escolha) {
-        VotoEntity.EscolhaVoto escolhaVoto = VotoEntity.EscolhaVoto.valueOf(escolha.name());
-        return repository.countBySessaoIdAndEscolhaVoto(sessaoId, escolhaVoto);
+        return repository.countBySessaoIdAndEscolhaVoto(sessaoId, escolha);
     }
 
 }
