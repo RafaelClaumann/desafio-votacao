@@ -56,7 +56,7 @@ Abrir a votação de uma pauta existente, pelo tempo definido na própria pauta.
 
 | Campo     | Tipo   | Regra                          |
 | --------- | ------ | ------------------------------ |
-| `pauta_id` | inteiro | Identificador da pauta-alvo |
+| `pauta_id` | inteiro | Obrigatório; identificador da pauta-alvo |
 
 **Regras de negócio**
 
@@ -69,8 +69,9 @@ HTTP 201 — sessão criada, com `id`, `id_pauta`, `started_at`, `expires_at` e 
 
 **Erros**
 
-Pauta inexistente → 400. Pauta já possui sessão → em condições normais dispara
-`IllegalArgumentException` não mapeada → **500** (ver [erros-e-rejeicoes.md](erros-e-rejeicoes.md#cenários-adicionais)).
+`pauta_id` ausente ou nulo → 400 (validação de entrada). Pauta inexistente → 400. Pauta já
+possui sessão → em condições normais dispara `IllegalArgumentException` não mapeada → **500**
+(ver [erros-e-rejeicoes.md](erros-e-rejeicoes.md#cenários-adicionais)).
 
 ---
 

@@ -82,10 +82,14 @@ Se a pauta existir, o processo de abertura segue adiante.
 
 **Violação**
 
-Se a pauta não existir, a abertura é recusada (HTTP 400). Nenhuma sessão é criada.
+- Se o identificador da pauta estiver **ausente ou nulo**, a abertura é recusada na validação de
+  entrada (HTTP 400) — `SessaoDTO.pautaId` é obrigatório (PF3 corrigido, ver
+  [pontos-fracos-e-falhas.md](pontos-fracos-e-falhas.md)).
+- Se a pauta **não existir**, a abertura é recusada (HTTP 400). Nenhuma sessão é criada.
 
 **Implementação**
 
+`SessaoDTO` (`@NotNull pautaId`) e `SessaoController.save()` (`@Valid`);
 `SessaoService.saveSessao()` delega para `PautaService.getPautaById()`, que lança
 `PautaNotFoundException`.
 

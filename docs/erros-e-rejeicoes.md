@@ -5,7 +5,7 @@ traduz isso para a API.
 
 | HTTP  | Situação de negócio                                                              | Exceção / origem                                    |
 | ----- | -------------------------------------------------------------------------------- | --------------------------------------------------- |
-| 400    | Dados de entrada inválidos (título, duração, sessão, CPF, escolha).              | `MethodArgumentNotValidException` (Bean Validation) |
+| 400    | Dados de entrada inválidos (título, duração, sessão/`pauta_id`, CPF, escolha).     | `MethodArgumentNotValidException` (Bean Validation) |
 | 400    | Corpo da requisição ilegível — ex.: escolha fora de SIM/NAO, JSON malformado.    | `HttpMessageNotReadableException`                 |
 | 400    | A pauta informada para abrir sessão **não existe** (R4).                          | `PautaNotFoundException`                           |
 | 400    | A sessão informada para votar/apurar **não existe** (R4/R12).                    | `SessaoNotFoundException`                          |
