@@ -91,10 +91,10 @@ jobs:
           docker logs app
           docker stop app
 
-      - name: Push para GHCR
+      - name: Push GHCR
         run: |
           echo "${{ steps.meta.outputs.tags }}" | while read -r TAG; do
             [ -z "$TAG" ] && continue
-            echo "→ Publicando $TAG"
+            echo "→ Publishing $TAG"
             docker push "$TAG"
           done
