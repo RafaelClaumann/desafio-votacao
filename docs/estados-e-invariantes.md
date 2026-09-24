@@ -41,11 +41,11 @@ FECHADA   (terminal)
 ## Estados de outros conceitos
 
 - **Pauta**: não possui estado explícito. A única informação derivada é se uma sessão já foi
-  criada para ela (o serviço `PautaService.pautaComStatuses()` calcula esse indicador, mas ele
-  **não é exposto por nenhum endpoint** da API).
+  criada para ela — esse indicador não é exposto por endpoint próprio; o consumidor cruza
+  `GET /pautas` com `GET /sessoes`.
 - **Voto**: não possui estados; é um registro permanente e imutável.
-- **Resultado**: não é um estado — é um valor calculado (APROVADA, REJEITADA, EMPATE) a partir
-  da contagem de votos de uma sessão fechada.
+- **Resultado**: não é um estado — é um valor calculado (SEM_VOTOS, APROVADA, REJEITADA,
+  EMPATE) a partir da contagem de votos de uma sessão fechada.
 
 ## Invariantes de Negócio
 

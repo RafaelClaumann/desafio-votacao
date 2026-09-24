@@ -105,9 +105,10 @@ Observações:
    `existsByPautaId` e lança essa exceção (mapeada para 409). Em corrida, a violação do
    índice único em `SessaoRepositoryAdapter` também é convertida na mesma exceção (mesmo
    padrão dos adapters de Pauta e Voto).
-3. **`pautaComStatuses()` não exposto.** O serviço `PautaService.pautaComStatuses()` calcula
-   o indicador `hasSessao` (se a pauta já possui sessão), mas **nenhum controller o utiliza**;
-   `GET /pautas` retorna apenas id/título/duração.
+3. **Sem indicador `hasSessao` para pautas (PF11 resolvido).** O record `PautaComStatus`, o
+   método `PautaService.pautaComStatuses()` e a consulta `SessaoRepository.findPautaIdsComSessao()`
+   foram removidos por serem código sem chamadas; `GET /pautas` retorna apenas id/título/duração
+   e o consumidor cruza com `GET /sessoes`.
 4. **Unicidade do voto declarada na entidade (PF7 resolvido).** `VotoEntity` declara a
    constraint composta `uk_voto_sessao_documento` em `@Table(uniqueConstraints = ...)`, com
    `(sessao_id, documento)` — mesma regra nome/filhos do `schema.sql`/`init.sql`. `documento`
@@ -133,3 +134,7 @@ Observações:
    do voto existe uma janela de poucos milissegundos em que um voto pode ser gravado logo após a
    expiração ter sido "vista" como aberta. É residual e pré-existente; a constraint
    `uk_voto_sessao_documento` não tem relação com o tempo.
+9. **Resultado sem votos = `SEM_VOTOS` (PF10 resolvido).** `ResultadoVotacao.status()` retorna
+   `SEM_VOTOS` quando `totalVotos() == 0`, antes da comparação de maioria. `EMPATE` passa a
+   significar apenas empate real com ao menos um voto registrado. Coberto por
+   `ResultadoVotacaoTest`.

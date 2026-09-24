@@ -64,8 +64,9 @@ R4 (pauta deve existir) · R5 (uma sessão por pauta) · R6 (duração definida 
 
 **Sucesso**
 
-HTTP 201 — sessão criada, com `id`, `id_pauta`, `started_at`, `expires_at` e `is_open`
-(sessão recém-criada está aberta por definição; o `is_open` reflete o relógio do banco).
+HTTP 201 — sessão criada, com `id`, `id_pauta`, `titulo_pauta`, `started_at`, `expires_at` e
+`is_open` (sessão recém-criada está aberta por definição; o `is_open` reflete o relógio do
+banco).
 
 **Erros**
 
@@ -82,9 +83,10 @@ Retornar todas as sessões criadas.
 
 **Sucesso**
 
-HTTP 200 — lista de sessões (`id`, `id_pauta`, `started_at`, `expires_at`, `is_open`).
-O campo `is_open` reflete o estado no momento da consulta, segundo o relógio do banco de dados
-(consistente entre todas as instâncias).
+HTTP 200 — lista de sessões (`id`, `id_pauta`, `titulo_pauta`, `started_at`, `expires_at`,
+`is_open`). O campo `is_open` reflete o estado no momento da consulta, segundo o relógio do
+banco de dados (consistente entre todas as instâncias). `titulo_pauta` traz o título da pauta
+votada.
 
 **Erros**
 
@@ -142,7 +144,7 @@ R12 (sessão deve existir e estar fechada) · R13 (status por maioria simples).
 **Sucesso**
 
 HTTP 200 — `id_sessao`, `votos_sim`, `votos_nao`, `total` e `status`
-(`APROVADA`, `REJEITADA` ou `EMPATE`).
+(`SEM_VOTOS`, `APROVADA`, `REJEITADA` ou `EMPATE`).
 
 **Erros**
 

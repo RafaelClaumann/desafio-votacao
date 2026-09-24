@@ -20,6 +20,7 @@ public interface SessaoMapper {
 
     @Mapping(target = "id", source = "sessao.id")
     @Mapping(target = "idPauta", source = "sessao.pauta.id")
+    @Mapping(target = "tituloPauta", source = "sessao.pauta.titulo")
     @Mapping(target = "startedAt", source = "sessao.startedAt")
     @Mapping(target = "expiresAt", source = "sessao.expiresAt")
     @Mapping(target = "isOpen", source = "isOpen")

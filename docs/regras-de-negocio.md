@@ -292,12 +292,14 @@ Uma sessão fechada é apurada.
 
 **Comportamento**
 
+- Nenhum voto registrado (SIM = NÃO = 0) → **SEM_VOTOS**.
 - Votos SIM **>** votos NÃO → **APROVADA**.
 - Votos SIM **<** votos NÃO → **REJEITADA**.
-- Votos SIM **==** votos NÃO → **EMPATE** (inclui o caso de sessão fechada sem nenhum voto).
+- Votos SIM **==** votos NÃO (com ao menos um voto) → **EMPATE**.
 
 O resultado reporta também os totais de SIM, NÃO e o total geral de votos. Não existe quórum
-mínimo nem percentual de aprovação — apenas a comparação direta das contagens.
+mínimo nem percentual de aprovação — apenas a comparação direta das contagens. A sessão
+fechada sem nenhum voto é distinta do empate real (PF10 resolvido).
 
 **Implementação**
 

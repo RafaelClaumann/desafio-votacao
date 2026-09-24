@@ -68,9 +68,10 @@ Objetivo: divulgar o resultado de uma sessão já encerrada.
    alcançada).
 4. O sistema conta os votos **SIM** e os votos **NÃO** registrados na sessão.
 5. O sistema calcula o **total de votos** e o **status**:
+   - nenhum voto → **SEM_VOTOS**
    - SIM > NÃO → **APROVADA**
    - SIM < NÃO → **REJEITADA**
-   - SIM = NÃO → **EMPATE**
+   - SIM = NÃO (com ao menos um voto) → **EMPATE**
 6. O resultado é retornado ao organizador.
 
 Resultado: resposta com totais e status (HTTP 200).
@@ -84,8 +85,8 @@ Rejeições possíveis: sessão inexistente (400) · sessão ainda aberta (400).
 Objetivo: visualizar as pautas e sessões existentes.
 
 1. **Listar pautas**: o sistema retorna todas as pautas criadas, com título e duração.
-2. **Listar sessões**: o sistema retorna todas as sessões criadas, com a pauta relacionada,
-   os horários de início/expiração e o indicador de aberta/fechada no momento da consulta
-   (calculado pelo relógio do banco, consistente para todas as instâncias).
+2. **Listar sessões**: o sistema retorna todas as sessões criadas, com a pauta relacionada
+   (id e título), os horários de início/expiração e o indicador de aberta/fechada no momento da
+   consulta (calculado pelo relógio do banco, consistente para todas as instâncias).
 
 Não há restrição de negócio para consulta — são listas simples de leitura.
