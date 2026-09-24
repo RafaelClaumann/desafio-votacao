@@ -3,6 +3,7 @@ package com.votacao.entrypoint.api.handler;
 import com.votacao.application.model.exception.DuplicatedPautaException;
 import com.votacao.application.model.exception.DuplicatedSessaoException;
 import com.votacao.application.model.exception.DuplicatedVoteException;
+import com.votacao.application.model.exception.InvalidDocumentoException;
 import com.votacao.application.model.exception.PautaNotFoundException;
 import com.votacao.application.model.exception.SessaoIsClosedException;
 import com.votacao.application.model.exception.SessaoIsOpenException;
@@ -56,6 +57,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DuplicatedVoteException.class)
     public ResponseEntity<ApiError> handleDuplicatedVote(DuplicatedVoteException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(InvalidDocumentoException.class)
+    public ResponseEntity<ApiError> handleInvalidDocumento(InvalidDocumentoException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(DuplicatedPautaException.class)
