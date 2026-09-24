@@ -6,6 +6,7 @@ on:
       - 'feature/**'
       - 'feat/**'
       - 'fix/**'
+      - 'refact/**'
 
 jobs:
   build:
