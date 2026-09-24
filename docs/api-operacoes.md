@@ -56,7 +56,7 @@ Abrir a votação de uma pauta existente, pelo tempo definido na própria pauta.
 
 | Campo     | Tipo   | Regra                          |
 | --------- | ------ | ------------------------------ |
-| `pauta_id` | inteiro | Obrigatório; identificador da pauta-alvo |
+| `id_pauta` | inteiro | Obrigatório; identificador da pauta-alvo |
 
 **Regras de negócio**
 
@@ -70,7 +70,7 @@ banco).
 
 **Erros**
 
-`pauta_id` ausente ou nulo → 400 (validação de entrada). Pauta inexistente → 400. Pauta já
+`id_pauta` ausente ou nulo → 400 (validação de entrada). Pauta inexistente → 400. Pauta já
 possui sessão → **409** (mensagem "Já existe uma sessão para a pauta: N").
 
 ---

@@ -7,15 +7,15 @@ Mapa das regras de negócio para as classes e métodos que as implementam.
 | R1 — Campos obrigatórios da pauta | `PautaRequestDTO` (`@NotBlank`, `@NotNull`); `PautaEntity` (colunas `NOT NULL`) |
 | R2 — Título único da pauta | `PautaService.savePauta()` → `PautaRepository.existsByTituloIgnoreCase()`; `PautaRepositoryAdapter.save()` captura `DataIntegrityViolationException` → `DuplicatedPautaException`; salvaguarda do banco `uk_pauta_titulo_lower`: em H2, coluna gerada `titulo_normalizado (LOWER(titulo))` no `schema.sql`; em PostgreSQL, índice funcional `LOWER(titulo)` em `.docker/postgres/init.sql` |
 | R3 — Normalização e tamanho do título | `Pauta` (constructor faz `titulo.trim()`); `PautaRequestDTO` (`@Size(20–150)`); `titulo VARCHAR(150)` em `schema.sql` |
-| R4 — Sessão exige pauta existente | `SessaoDTO` (`@NotNull pautaId`) + `SessaoController.save()` (`@Valid`); `SessaoService.saveSessao()` → `PautaService.getPautaById()` → `PautaNotFoundException` |
-| R5 — Uma sessão por pauta | `SessaoService.saveSessao()` → `sessaoRepository.existsByPautaId()` → `DuplicatedSessaoException`; `SessaoRepositoryAdapter.save()` converte a violação do índice único `uk_sessao_pauta(sessoes.pauta_id)` em `schema.sql` |
+| R4 — Sessão exige pauta existente | `SessaoDTO` (`@NotNull idPauta`) + `SessaoController.save()` (`@Valid`); `SessaoService.saveSessao()` → `PautaService.getPautaById()` → `PautaNotFoundException` |
+| R5 — Uma sessão por pauta | `SessaoService.saveSessao()` → `sessaoRepository.existsByIdPauta()` → `DuplicatedSessaoException`; `SessaoRepositoryAdapter.save()` converte a violação do índice único `uk_sessao_pauta(sessoes.id_pauta)` em `schema.sql` |
 | R6 — Duração definida pela pauta | `PautaRequestDTO` (`@Positive` + `@Max(43200)` em `tempoVotacaoMinutos`); `SessaoService.saveSessao()`: `expiresAt = sessaoRepository.now().plusMinutes(...)` (relógio do banco) |
 | R7/R8 — Votos somente em sessão aberta | `VotoService.votar()` → `SessaoService.getOpenSessaoById()` → `Sessao.isOpen(now)` (`now.isBefore(expiresAt)`) e `SessaoIsClosedException`; `now` de `SessaoRepository.now()` |
 | R9 — CPF válido | `VotoDTO` (anotação `@CPF`) + `VotoService.votar()` (após sessão aberta) → `DocumentoValidator.isValidDocumento()` (validação externa fictícia) → `InvalidDocumentoException` (400) / `HttpIntegrationException` (503) |
-| R10 — Um voto por CPF por sessão | `VotoService.votar()` → `VotoRepository.existsBySessaoIdAndDocumento()`; `VotoRepositoryAdapter.save()` → `DuplicatedVoteException`; constraint `uk_voto_sessao_documento(sessao_id, documento)` em `schema.sql` |
+| R10 — Um voto por CPF por sessão | `VotoService.votar()` → `VotoRepository.existsByIdSessaoAndDocumento()`; `VotoRepositoryAdapter.save()` → `DuplicatedVoteException`; constraint `uk_voto_sessao_documento(sessao_id, documento)` em `schema.sql` |
 | R11 — Voto apenas SIM/NÃO | Enum `Voto.Escolha { SIM, NAO }`; `HttpMessageNotReadableException` para valores inválidos |
 | R12 — Resultado só para sessão fechada | `VotoService.apurarVotosSessao()` → `SessaoService.getClosedSessaoById()` → `Sessao.isOpen(now)` com `now` de `SessaoRepository.now()` → `SessaoIsOpenException` / `SessaoNotFoundException` |
-| R13 — Status por maioria simples | `ResultadoVotacao.status()`; contagem em `VotoRepository.countBySessaoIdAndEscolha()` |
+| R13 — Status por maioria simples | `ResultadoVotacao.status()`; contagem em `VotoRepository.countByIdSessaoAndEscolha()` |
 
 ## Caminhos de execução (controller → regra)
 
@@ -81,9 +81,9 @@ uma "constraint".
 | Índice | Tipo | O que impõe | Definição |
 | ------ | ---- | ----------- | --------- |
 | `uk_pauta_titulo_lower` | funcional único sobre `LOWER(titulo)` | R2 — título único da pauta **ignorando caixa** (salvaguarda do banco contra corridas) | H2: coluna gerada `titulo_normalizado` + UNIQUE; PG: `CREATE UNIQUE INDEX ... ON pautas (LOWER(titulo))` |
-| `uk_sessao_pauta` | único sobre `pauta_id` | R5 — no máximo uma sessão por pauta | `CREATE UNIQUE INDEX uk_sessao_pauta ON sessoes (pauta_id)` (idêntico nos dois) |
+| `uk_sessao_pauta` | único sobre `id_pauta` | R5 — no máximo uma sessão por pauta | `CREATE UNIQUE INDEX uk_sessao_pauta ON sessoes (id_pauta)` (idêntico nos dois) |
 | `uk_voto_sessao_documento` | constraint única sobre `(sessao_id, documento)` | R10 — um voto por CPF por sessão | `CONSTRAINT uk_voto_sessao_documento UNIQUE (sessao_id, documento)` |
-| `idx_voto_sessao_escolha` | comum sobre `(sessao_id, escolha_voto)` | R13 — performance da apuração (`VotoRepository.countBySessaoIdAndEscolha`) | `CREATE INDEX idx_voto_sessao_escolha ON votos (sessao_id, escolha_voto)` |
+| `idx_voto_sessao_escolha` | comum sobre `(sessao_id, escolha_voto)` | R13 — performance da apuração (`VotoRepository.countByIdSessaoAndEscolha`) | `CREATE INDEX idx_voto_sessao_escolha ON votos (sessao_id, escolha_voto)` |
 
 Observações:
 
@@ -108,7 +108,7 @@ Observações:
    30 dias** (`@Max`). Valores 0/negativos criariam sessão já fechada; valores acima do teto
    estourariam o intervalo de datas no cálculo de expiração.
 2. **`DuplicatedSessaoException` para R5.** `SessaoService.saveSessao()` usa
-   `existsByPautaId` e lança essa exceção (mapeada para 409). Em corrida, a violação do
+   `existsByIdPauta` e lança essa exceção (mapeada para 409). Em corrida, a violação do
    índice único em `SessaoRepositoryAdapter` também é convertida na mesma exceção (mesmo
    padrão dos adapters de Pauta e Voto).
 3. **Sem indicador `hasSessao` para pautas (PF11 resolvido).** O record `PautaComStatus`, o

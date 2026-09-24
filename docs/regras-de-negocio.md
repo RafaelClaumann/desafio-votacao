@@ -87,13 +87,13 @@ Se a pauta existir, o processo de abertura segue adiante.
 **Violação**
 
 - Se o identificador da pauta estiver **ausente ou nulo**, a abertura é recusada na validação de
-  entrada (HTTP 400) — `SessaoDTO.pautaId` é obrigatório (PF3 corrigido, ver
+  entrada (HTTP 400) — `SessaoDTO.idPauta` é obrigatório (PF3 corrigido, ver
   [pontos-fracos-e-falhas.md](pontos-fracos-e-falhas.md)).
 - Se a pauta **não existir**, a abertura é recusada (HTTP 400). Nenhuma sessão é criada.
 
 **Implementação**
 
-`SessaoDTO` (`@NotNull pautaId`) e `SessaoController.save()` (`@Valid`);
+`SessaoDTO` (`@NotNull idPauta`) e `SessaoController.save()` (`@Valid`);
 `SessaoService.saveSessao()` delega para `PautaService.getPautaById()`, que lança
 `PautaNotFoundException`.
 
@@ -113,11 +113,11 @@ Se a pauta já possui uma sessão, a abertura é recusada e nenhuma nova sessão
 (**HTTP 409** — "Já existe uma sessão para a pauta: N"). A regra
 vale pela vida inteira da pauta: mesmo depois de a sessão existente fechar, não é possível abrir
 outra sessão para a mesma pauta. O banco também aplica essa unicidade
-(índice único em `sessoes.pauta_id`), traduzida pelo adapter em 409 sob corrida.
+(índice único em `sessoes.id_pauta`), traduzida pelo adapter em 409 sob corrida.
 
 **Implementação**
 
-`SessaoService.saveSessao()` → `sessaoRepository.existsByPautaId()` lança
+`SessaoService.saveSessao()` → `sessaoRepository.existsByIdPauta()` lança
 `DuplicatedSessaoException` (mapeada para 409); `SessaoRepositoryAdapter.save()` converte a
 violação do índice único `uk_sessao_pauta` no `schema.sql` em `DuplicatedSessaoException`.
 
@@ -263,7 +263,7 @@ salvaguarda contra votos simultâneos abusando da verificação em memória.
 **Implementação**
 
 `VotoService.votar()` (normaliza o CPF para somente dígitos e consulta
-`votoRepository.existsBySessaoIdAndDocumento()` com a forma canônica); e
+`votoRepository.existsByIdSessaoAndDocumento()` com a forma canônica); e
 `VotoRepositoryAdapter.save()` traduz violação de integridade em `DuplicatedVoteException`.
 
 ### R11 — O voto só pode ser SIM ou NÃO
@@ -330,4 +330,4 @@ fechada sem nenhum voto é distinta do empate real (PF10 resolvido).
 **Implementação**
 
 `ResultadoVotacao.status()` e a contagem via
-`votoRepository.countBySessaoIdAndEscolha()` para cada escolha.
+`votoRepository.countByIdSessaoAndEscolha()` para cada escolha.

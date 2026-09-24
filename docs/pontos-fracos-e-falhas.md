@@ -92,22 +92,22 @@ teste `PautaControllerTest.save_shouldReject_whenDurationExceedsUpperLimit`;
 
 ---
 
-## PF3 — (RESOLVIDO) Criação de sessão sem validação da entrada (pautaId nulo)
+## PF3 — (RESOLVIDO) Criação de sessão sem validação da entrada (idPauta nulo)
 
-**Status: corrigido** — `SessaoDTO.pautaId` agora exige valor **presente** (`@NotNull`) e
+**Status: corrigido** — `SessaoDTO.idPauta` agora exige valor **presente** (`@NotNull`) e
 `SessaoController.save()` valida o corpo com `@Valid`.
 
 **Comportamento anterior**
 
-`POST /sessoes` com corpo `{}` (ou sem `pauta_id`) fazia `pautaId = null` chegar a
+`POST /sessoes` com corpo `{}` (ou sem `id_pauta`) fazia `idPauta = null` chegar a
 `SessaoService.saveSessao(null)` → `findById(null)`. O Spring Data lançava
 `IllegalArgumentException` ("id must not be null"), que não possui handler específico →
 **HTTP 500** no lugar de um 400 de validação. Diferente de `/pautas` e `/votos`, o controller
-de sessões não usava `@Valid` e `SessaoDTO.pautaId` não tinha constraints.
+de sessões não usava `@Valid` e `SessaoDTO.idPauta` não tinha constraints.
 
 **Comportamento atual**
 
-`pauta_id` ausente ou nulo é **recusado na entrada** (HTTP 400) pela Bean Validation, com a
+`id_pauta` ausente ou nulo é **recusado na entrada** (HTTP 400) pela Bean Validation, com a
 mensagem "O id da Pauta é obrigatório" — o `GlobalExceptionHandler` devolve o erro de campo
 `idPauta`. Nenhuma chamada chega ao serviço/repositório.
 
@@ -125,8 +125,8 @@ POST /sessoes
 **Impacto**: originalmente Média — corrigido; sem impacto residual (validação na entrada,
 mesmo padrão de `/pautas` e `/votos`).
 
-**Evidência**: `SessaoDTO` (`@NotNull pautaId`), `SessaoController.save()` (`@Valid`);
-teste `SessaoControllerTest.save_shouldReject_whenPautaIdIsMissing`.
+**Evidência**: `SessaoDTO` (`@NotNull idPauta`), `SessaoController.save()` (`@Valid`);
+teste `SessaoControllerTest.save_shouldReject_whenIdPautaIsMissing`.
 
 ---
 
@@ -155,7 +155,7 @@ criada. A violação é capturada na verificação do serviço (sequencial) e ta
 ```json
 POST /sessoes
 {
-  "pauta_id": 1
+  "id_pauta": 1
 }
 → 409 Conflict — "Já existe uma sessão para a pauta: 1"
 ```
@@ -163,7 +163,7 @@ POST /sessoes
 **Impacto**: originalmente Alta — corrigido; sem impacto residual (erro de negócio mapeado).
 
 **Evidência**: `DuplicatedSessaoException`, `SessaoService.saveSessao()`
-(`existsByPautaId`), `GlobalExceptionHandler.handleDuplicatedSessao()` (409);
+(`existsByIdPauta`), `GlobalExceptionHandler.handleDuplicatedSessao()` (409);
 testes `SessaoServiceTest.saveSessao_shouldThrowWhenSessionAlreadyExistsForPauta` e
 `SessaoControllerTest.save_shouldReject_whenPautaAlreadyHasSession`.
 
@@ -178,7 +178,7 @@ testes `SessaoServiceTest.saveSessao_shouldThrowWhenSessionAlreadyExistsForPauta
 **Comportamento anterior**
 
 Duas requisições simultâneas tentavam abrir sessão para a mesma pauta. A verificação
-`existsByPautaId` é **check-then-act** sem trava: as duas podiam passar pela checagem.
+`existsByIdPauta` é **check-then-act** sem trava: as duas podiam passar pela checagem.
 O índice único `uk_sessao_pauta` bloqueava a duplicidade no banco, **mas**
 `SessaoRepositoryAdapter.save()` **não capturava** `DataIntegrityViolationException` (diferente
 dos adapters de Pauta e Voto) → a violação propagava como **HTTP 500**.
@@ -291,7 +291,7 @@ mesma sessão**, burlando a regra R10 pela formatação.
 
 **Impacto**: **Alta** — regra de negócio contornável por um valor trivial e legal de CPF.
 
-**Evidência**: `VotoService.votar()` (`normalizarDocumento` antes de `existsBySessaoIdAndDocumento`
+**Evidência**: `VotoService.votar()` (`normalizarDocumento` antes de `existsByIdSessaoAndDocumento`
 e da persistência); `VotoServiceTest` com cenários de normalização do documento e de recusa com
 formatação distinta.
 
@@ -519,7 +519,7 @@ fechada" possuem cobertura (`getOpenSessaoById*`).
 | - | ------------------------------------------- | -------------------------------- | ------------------------------------------ | ------- |
 | 1 | Duração 0/negativa aceita (PF1)             | `tempo_votacao_minutos` ≤ 0      | **Corrigido** — rejeitado na criação (400) | Corrigida |
 | 2 | Sem limite superior de duração              | duração muito grande             | **Corrigido** — rejeitado na criação (400) | Corrigida |
-| 3 | `POST /sessoes` sem validação               | `pauta_id` nulo/ausente          | **Corrigido** — rejeitado na entrada (400) | Corrigida |
+| 3 | `POST /sessoes` sem validação               | `id_pauta` nulo/ausente          | **Corrigido** — rejeitado na entrada (400) | Corrigida |
 | 4 | 2ª sessão da pauta                          | violação R5                      | **Corrigido** — rejeitado com 409 Conflict | Corrigida |
 | 5 | Corrida na criação de sessão                | duas requisições simultâneas     | **Corrigido** — integridade traduzida (409) | Corrigida |
 | 6 | Divergência case-sensitive de título        | corrida com caixa variada        | **Corrigido** — índice único `LOWER(titulo)` | Corrigida |

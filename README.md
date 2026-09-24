@@ -37,7 +37,7 @@ Executar os testes:
 ## Fluxo típico de uso
 
 1. **POST /pautas** — cria a pauta com título e duração (min).
-2. **POST /sessoes** — abre a votação da pauta (`pauta_id`). O sistema usa a duração da pauta.
+2. **POST /sessoes** — abre a votação da pauta (`id_pauta`). O sistema usa a duração da pauta.
    A sessão fica aberta e **fecha sozinha** ao expirar.
 3. **POST /votos** — associados votam SIM/NÃO com CPF enquanto a sessão estiver aberta.
 4. **GET /sessoes/{id}/resultado** — apura e divulga o resultado **após o fechamento** da sessão.
@@ -138,7 +138,7 @@ Uma pauta só pode ter **uma única sessão** (mesmo após o fechamento).
 
 ```json
 {
-  "pauta_id": 1
+  "id_pauta": 1
 }
 ```
 
@@ -147,7 +147,7 @@ Uma pauta só pode ter **uma única sessão** (mesmo após o fechamento).
 ```bash
 curl -X POST http://localhost:8080/sessoes \
   -H 'Content-Type: application/json' \
-  -d '{"pauta_id":1}'
+  -d '{"id_pauta":1}'
 ```
 
 **Resposta 201 (Created):**
@@ -168,7 +168,7 @@ curl -X POST http://localhost:8080/sessoes \
 
 **Erros:**
 
-- `400` — `pauta_id` **ausente ou nulo** ("O id da Pauta é obrigatório").
+- `400` — `id_pauta` **ausente ou nulo** ("O id da Pauta é obrigatório").
 - `400` — a pauta não existe.
 - `409` — a pauta já possui sessão ("Já existe uma sessão para a pauta: N"); consulte a
   pauta/lista de sessões antes de tentar abrir.
@@ -350,7 +350,7 @@ curl -X POST http://localhost:8080/pautas \
 # 2. Abrir a sessão (guardar o "id" retornado, ex.: 1)
 curl -X POST http://localhost:8080/sessoes \
   -H 'Content-Type: application/json' \
-  -d '{"pauta_id":1}'
+  -d '{"id_pauta":1}'
 
 # 3. Votar SIM e NAO (com CPFs distintos)
 curl -X POST http://localhost:8080/votos \
