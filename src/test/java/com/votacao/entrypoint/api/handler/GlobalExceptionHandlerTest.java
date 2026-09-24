@@ -164,7 +164,7 @@ class GlobalExceptionHandlerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {
-                                      "pauta_id": 1
+                                      "id_pauta": 1
                                     }
                                     """))
                     .andExpect(status().isBadRequest())
@@ -219,7 +219,7 @@ class GlobalExceptionHandlerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {
-                                      "pauta_id": 1
+                                      "id_pauta": 1
                                     }
                                     """))
                     .andExpect(status().isConflict())

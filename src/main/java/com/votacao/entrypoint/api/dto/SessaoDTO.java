@@ -4,6 +4,6 @@ import jakarta.validation.constraints.NotNull;
 
 public record SessaoDTO(
         @NotNull(message = "O id da Pauta é obrigatório")
-        Long pautaId
+        Long idPauta
 ) {
 }

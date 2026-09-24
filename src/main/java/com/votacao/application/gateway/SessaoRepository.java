@@ -10,7 +10,7 @@ public interface SessaoRepository {
 
     Sessao save(Sessao sessao);
 
-    boolean existsByPautaId(Long pautaId);
+    boolean existsByPautaId(Long idPauta);
 
     List<Sessao> findAll();
 

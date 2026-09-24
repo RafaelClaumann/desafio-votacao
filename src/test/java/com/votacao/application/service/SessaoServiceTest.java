@@ -50,16 +50,16 @@ class SessaoServiceTest {
     @Test
     @DisplayName("saveSessao should create and save a session with the pauta duration")
     void saveSessao_shouldCreateAndSaveSessionWithPautaDuration() {
-        Long pautaId = 1L;
-        Pauta pauta = new Pauta(pautaId, "Reforma estatutária do capítulo quatro", 10L);
+        Long idPauta = 1L;
+        Pauta pauta = new Pauta(idPauta, "Reforma estatutária do capítulo quatro", 10L);
         LocalDateTime now = LocalDateTime.of(2026, 9, 23, 10, 0);
 
-        when(pautaService.getPautaById(pautaId)).thenReturn(pauta);
-        when(sessaoRepository.existsByPautaId(pautaId)).thenReturn(false);
+        when(pautaService.getPautaById(idPauta)).thenReturn(pauta);
+        when(sessaoRepository.existsByPautaId(idPauta)).thenReturn(false);
         when(sessaoRepository.now()).thenReturn(now);
         when(sessaoRepository.save(any(Sessao.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Sessao result = sessaoService.saveSessao(pautaId);
+        Sessao result = sessaoService.saveSessao(idPauta);
 
         ArgumentCaptor<Sessao> sessaoCaptor = ArgumentCaptor.forClass(Sessao.class);
         verify(sessaoRepository).save(sessaoCaptor.capture());
@@ -73,22 +73,22 @@ class SessaoServiceTest {
                 () -> assertEquals(savedSession.startedAt(), result.startedAt()),
                 () -> assertEquals(savedSession.expiresAt(), result.expiresAt())
         );
-        verify(pautaService).getPautaById(pautaId);
+        verify(pautaService).getPautaById(idPauta);
     }
 
     @Test
     @DisplayName("saveSessao should throw PautaNotFoundException when the pauta does not exist")
     void saveSessao_shouldThrowWhenPautaDoesNotExist() {
-        Long pautaId = 1L;
+        Long idPauta = 1L;
 
-        when(pautaService.getPautaById(pautaId)).thenThrow(new PautaNotFoundException(pautaId));
+        when(pautaService.getPautaById(idPauta)).thenThrow(new PautaNotFoundException(idPauta));
 
         PautaNotFoundException exception = assertThrows(
                 PautaNotFoundException.class,
-                () -> sessaoService.saveSessao(pautaId)
+                () -> sessaoService.saveSessao(idPauta)
         );
 
-        assertEquals("Pauta com id " + pautaId + " não encontrada", exception.getMessage());
+        assertEquals("Pauta com id " + idPauta + " não encontrada", exception.getMessage());
         verify(sessaoRepository, never()).existsByPautaId(any());
         verify(sessaoRepository, never()).save(any(Sessao.class));
     }
@@ -96,18 +96,18 @@ class SessaoServiceTest {
     @Test
     @DisplayName("saveSessao should throw DuplicatedSessaoException when the pauta already has a session")
     void saveSessao_shouldThrowWhenSessionAlreadyExistsForPauta() {
-        Long pautaId = 1L;
-        Pauta pauta = new Pauta(pautaId, "Reforma estatutária do capítulo quatro", 10L);
+        Long idPauta = 1L;
+        Pauta pauta = new Pauta(idPauta, "Reforma estatutária do capítulo quatro", 10L);
 
-        when(pautaService.getPautaById(pautaId)).thenReturn(pauta);
-        when(sessaoRepository.existsByPautaId(pautaId)).thenReturn(true);
+        when(pautaService.getPautaById(idPauta)).thenReturn(pauta);
+        when(sessaoRepository.existsByPautaId(idPauta)).thenReturn(true);
 
         DuplicatedSessaoException exception = assertThrows(
                 DuplicatedSessaoException.class,
-                () -> sessaoService.saveSessao(pautaId)
+                () -> sessaoService.saveSessao(idPauta)
         );
 
-        assertEquals("Já existe uma sessão para a pauta: " + pautaId, exception.getMessage());
+        assertEquals("Já existe uma sessão para a pauta: " + idPauta, exception.getMessage());
         verify(sessaoRepository, never()).save(any(Sessao.class));
     }
 

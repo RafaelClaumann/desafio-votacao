@@ -109,7 +109,7 @@ de sessões não usava `@Valid` e `SessaoDTO.pautaId` não tinha constraints.
 
 `pauta_id` ausente ou nulo é **recusado na entrada** (HTTP 400) pela Bean Validation, com a
 mensagem "O id da Pauta é obrigatório" — o `GlobalExceptionHandler` devolve o erro de campo
-`pautaId`. Nenhuma chamada chega ao serviço/repositório.
+`idPauta`. Nenhuma chamada chega ao serviço/repositório.
 
 **Exemplo (comportamento atual)**
 
@@ -118,7 +118,7 @@ POST /sessoes
 {}
 → 400 Bad Request — "Erro de validação"
    [
-     { "field": "pautaId", "message": "O id da Pauta é obrigatório" }
+     { "field": "idPauta", "message": "O id da Pauta é obrigatório" }
    ]
 ```
 

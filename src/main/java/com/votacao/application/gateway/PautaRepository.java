@@ -11,7 +11,7 @@ public interface PautaRepository {
 
     List<Pauta> getPautas();
 
-    Optional<Pauta> findById(Long pautaId);
+    Optional<Pauta> findById(Long idPauta);
 
     boolean existsByTituloIgnoreCase(String titulo);
 

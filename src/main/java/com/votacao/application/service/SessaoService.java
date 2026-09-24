@@ -30,11 +30,11 @@ public class SessaoService {
     }
 
     @Transactional
-    public Sessao saveSessao(Long pautaId) {
-        Pauta pauta = pautaService.getPautaById(pautaId);
+    public Sessao saveSessao(Long idPauta) {
+        Pauta pauta = pautaService.getPautaById(idPauta);
 
-        if (sessaoRepository.existsByPautaId(pautaId)) {
-            throw new DuplicatedSessaoException(pautaId);
+        if (sessaoRepository.existsByPautaId(idPauta)) {
+            throw new DuplicatedSessaoException(idPauta);
         }
 
         LocalDateTime now = sessaoRepository.now();

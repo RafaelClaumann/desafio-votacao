@@ -38,7 +38,7 @@ public class SessaoController {
 
     @PostMapping
     public ResponseEntity<SessaoResponseDTO> save(@RequestBody @Valid final SessaoDTO requestBody) {
-        Sessao saved = service.saveSessao(requestBody.pautaId());
+        Sessao saved = service.saveSessao(requestBody.idPauta());
 
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()

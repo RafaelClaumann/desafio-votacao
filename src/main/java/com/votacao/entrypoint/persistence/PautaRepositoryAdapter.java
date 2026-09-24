@@ -40,8 +40,8 @@ public class PautaRepositoryAdapter implements PautaRepository {
     }
 
     @Override
-    public Optional<Pauta> findById(Long pautaId) {
-        return repository.findById(pautaId).map(mapper::toDomain);
+    public Optional<Pauta> findById(Long idPauta) {
+        return repository.findById(idPauta).map(mapper::toDomain);
     }
 
     @Override
