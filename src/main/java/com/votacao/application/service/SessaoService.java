@@ -8,6 +8,8 @@ import com.votacao.application.model.exception.SessaoIsClosedException;
 import com.votacao.application.model.exception.SessaoIsOpenException;
 import com.votacao.application.model.exception.SessaoNotFoundException;
 import com.votacao.application.service.query.SessaoComStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +18,8 @@ import java.util.List;
 
 @Service
 public class SessaoService {
+
+    private static final Logger log = LoggerFactory.getLogger(SessaoService.class);
 
     private final SessaoRepository sessaoRepository;
     private final PautaService pautaService;
@@ -58,6 +62,7 @@ public class SessaoService {
             throw new SessaoIsClosedException(sessaoId);
         }
 
+        log.info("Retornando Sessao aberta - sessaoId: {}", sessaoId);
         return sessao;
     }
 

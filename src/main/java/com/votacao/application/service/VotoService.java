@@ -8,11 +8,16 @@ import com.votacao.application.model.Voto;
 import com.votacao.application.model.exception.DuplicatedVoteException;
 import com.votacao.application.model.exception.InvalidDocumentoException;
 import com.votacao.application.service.query.ApuracaoSessao;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class VotoService {
+
+    private static final Logger log = LoggerFactory.getLogger(VotoService.class);
+
 
     private final VotoRepository votoRepository;
     private final SessaoService sessaoService;
@@ -42,6 +47,7 @@ public class VotoService {
             throw new DuplicatedVoteException(idSessao, documentoNormalizado);
         }
 
+        log.info("Registrando voto - idSessao: {}", idSessao);
         Voto voto = new Voto(null, sessao, documentoNormalizado, escolhaVoto);
         return votoRepository.save(voto);
     }
