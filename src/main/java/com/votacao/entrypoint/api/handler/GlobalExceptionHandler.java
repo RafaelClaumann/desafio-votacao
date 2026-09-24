@@ -40,19 +40,24 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
     }
 
-    @ExceptionHandler(SessaoNotFoundException.class)
-    public ResponseEntity<ApiError> handleSessaoNotFound(SessaoNotFoundException ex, HttpServletRequest request) {
+    @ExceptionHandler(PautaNotFoundException.class)
+    public ResponseEntity<ApiError> handlePautaNotFound(PautaNotFoundException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
     }
 
-    @ExceptionHandler(SessaoIsClosedException.class)
-    public ResponseEntity<ApiError> handleSessaoIsClosed(SessaoIsClosedException ex, HttpServletRequest request) {
+    @ExceptionHandler(DuplicatedPautaException.class)
+    public ResponseEntity<ApiError> handleDuplicatedPauta(DuplicatedPautaException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler({SessaoNotFoundException.class, SessaoIsClosedException.class, SessaoIsOpenException.class})
+    public ResponseEntity<ApiError> handleSessaoBadRequest(RuntimeException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
     }
 
-    @ExceptionHandler(SessaoIsOpenException.class)
-    public ResponseEntity<ApiError> handleSessaoIsOpen(SessaoIsOpenException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
+    @ExceptionHandler(DuplicatedSessaoException.class)
+    public ResponseEntity<ApiError> handleDuplicatedSessao(DuplicatedSessaoException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(DuplicatedVoteException.class)
@@ -68,21 +73,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpIntegrationException.class)
     public ResponseEntity<ApiError> handleHttpIntegration(HttpIntegrationException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request, List.of());
-    }
-
-    @ExceptionHandler(DuplicatedPautaException.class)
-    public ResponseEntity<ApiError> handleDuplicatedPauta(DuplicatedPautaException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
-    }
-
-    @ExceptionHandler(DuplicatedSessaoException.class)
-    public ResponseEntity<ApiError> handleDuplicatedSessao(DuplicatedSessaoException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
-    }
-
-    @ExceptionHandler(PautaNotFoundException.class)
-    public ResponseEntity<ApiError> handlePautaNotFound(PautaNotFoundException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(Exception.class)
@@ -107,5 +97,4 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity.status(status).body(body);
     }
-
 }

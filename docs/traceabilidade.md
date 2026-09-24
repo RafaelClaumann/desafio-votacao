@@ -46,7 +46,7 @@ GET /sessoes/{id}/resultado
 
 ## Mapeamento de erros → API
 
-As exceções são traduzidas para HTTP em `GlobalExceptionHandler`:
+As exceções são traduzidas para HTTP no `GlobalExceptionHandler`:
 
 | Exceção                    | HTTP            |
 | -------------------------- | --------------- |
@@ -59,6 +59,8 @@ As exceções são traduzidas para HTTP em `GlobalExceptionHandler`:
 | `DuplicatedPautaException`| 409 |
 | `DuplicatedSessaoException`| 409 |
 | `DuplicatedVoteException` | 409 |
+| `InvalidDocumentoException`| 400 |
+| `HttpIntegrationException`| 503 |
 | demais                    | 500 |
 
 ## Índices do banco
