@@ -65,7 +65,7 @@ R4 (pauta deve existir) · R5 (uma sessão por pauta) · R6 (duração definida 
 **Sucesso**
 
 HTTP 201 — sessão criada, com `id`, `id_pauta`, `started_at`, `expires_at` e `is_open`
-(calculado no momento da resposta).
+(sessão recém-criada está aberta por definição; o `is_open` reflete o relógio do banco).
 
 **Erros**
 
@@ -83,7 +83,8 @@ Retornar todas as sessões criadas.
 **Sucesso**
 
 HTTP 200 — lista de sessões (`id`, `id_pauta`, `started_at`, `expires_at`, `is_open`).
-O campo `is_open` reflete o estado no momento da consulta.
+O campo `is_open` reflete o estado no momento da consulta, segundo o relógio do banco de dados
+(consistente entre todas as instâncias).
 
 **Erros**
 

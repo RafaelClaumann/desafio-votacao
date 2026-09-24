@@ -9,12 +9,12 @@ Mapa das regras de negócio para as classes e métodos que as implementam.
 | R3 — Normalização e tamanho do título | `Pauta` (constructor faz `titulo.trim()`); `PautaRequestDTO` (`@Size(20–150)`); `titulo VARCHAR(150)` em `schema.sql` |
 | R4 — Sessão exige pauta existente | `SessaoDTO` (`@NotNull pautaId`) + `SessaoController.save()` (`@Valid`); `SessaoService.saveSessao()` → `PautaService.getPautaById()` → `PautaNotFoundException` |
 | R5 — Uma sessão por pauta | `SessaoService.saveSessao()` → `sessaoRepository.existsByPautaId()` → `DuplicatedSessaoException`; `SessaoRepositoryAdapter.save()` converte a violação do índice único `uk_sessao_pauta(sessoes.pauta_id)` em `schema.sql` |
-| R6 — Duração definida pela pauta | `PautaRequestDTO` (`@Positive` + `@Max(43200)` em `tempoVotacaoMinutos`); `SessaoService.saveSessao()`: `expiresAt = now.plusMinutes(pauta.tempoVotacaoMinutos())` |
-| R7/R8 — Votos somente em sessão aberta | `VotoService.votar()` → `SessaoService.getOpenSessaoById()` → `Sessao.isOpen(now)` e `SessaoIsClosedException` |
+| R6 — Duração definida pela pauta | `PautaRequestDTO` (`@Positive` + `@Max(43200)` em `tempoVotacaoMinutos`); `SessaoService.saveSessao()`: `expiresAt = sessaoRepository.now().plusMinutes(...)` (relógio do banco) |
+| R7/R8 — Votos somente em sessão aberta | `VotoService.votar()` → `SessaoService.getOpenSessaoById()` → `Sessao.isOpen(now)` (`now.isBefore(expiresAt)`) e `SessaoIsClosedException`; `now` de `SessaoRepository.now()` |
 | R9 — CPF válido | `VotoDTO` (anotação `@CPF`) |
 | R10 — Um voto por CPF por sessão | `VotoService.votar()` → `VotoRepository.existsBySessaoIdAndDocumento()`; `VotoRepositoryAdapter.save()` → `DuplicatedVoteException`; constraint `uk_voto_sessao_documento(sessao_id, documento)` em `schema.sql` |
 | R11 — Voto apenas SIM/NÃO | Enum `Voto.Escolha { SIM, NAO }`; `HttpMessageNotReadableException` para valores inválidos |
-| R12 — Resultado só para sessão fechada | `VotoService.apurarVotosSessao()` → `SessaoService.getClosedSessaoById()` → `SessaoIsOpenException` / `SessaoNotFoundException` |
+| R12 — Resultado só para sessão fechada | `VotoService.apurarVotosSessao()` → `SessaoService.getClosedSessaoById()` → `Sessao.isOpen(now)` com `now` de `SessaoRepository.now()` → `SessaoIsOpenException` / `SessaoNotFoundException` |
 | R13 — Status por maioria simples | `ResultadoVotacao.status()`; contagem em `VotoRepository.countBySessaoIdAndEscolha()` |
 
 ## Caminhos de execução (controller → regra)
@@ -33,13 +33,13 @@ POST /sessoes
 POST /votos
   VotoController.save()
    → VotoService.votar()             [R7/R8, R10]
-   → SessaoService.getOpenSessaoById()  [R7/R8]
+   → SessaoService.getOpenSessaoById()  [R7/R8 — Sessao.isOpen(now), now do banco]
    → VotoRepositoryAdapter.save()    [R10 — salvaguarda do banco]
 
 GET /sessoes/{id}/resultado
   SessaoController.apurar()
    → VotoService.apurarVotosSessao() [R12]
-   → SessaoService.getClosedSessaoById() [R12]
+   → SessaoService.getClosedSessaoById() [R12 — Sessao.isOpen(now), now do banco]
    → ResultadoVotacao.status()       [R13]
 ```
 
@@ -120,6 +120,15 @@ Observações:
 6. **Testes de `SessaoService` alinhados.** `SessaoServiceTest` está ativo e cobre
    `PautaNotFoundException`, `DuplicatedSessaoException` e a criação bem-sucedida, de acordo
    com a implementação atual.
-7. **`Sessao.isOpen()` desconsidera `startedAt`.** O estado aberta/fechada depende somente de
-   `expiresAt` (e de `expiresAt != null`). Como a criação sempre define `startedAt` e
-   `expiresAt`, a janela efetiva de votação é `[criação, expiração)`.
+7. **Regra no domínio, relógio do banco (PF9 resolvido).** "A sessão está aberta?" é um método
+   puro do domínio — `Sessao.isOpen(now)` → `now.isBefore(expiresAt)` — e o `now` vem sempre de
+   `SessaoRepository.now()` (`SELECT CURRENT_TIMESTAMP`, única autoridade de hora, comum a todas
+   as instâncias). A regra não mora mais em queries SQL (`isOpenById`/`findOpenIds` foram
+   removidas): `getOpenSessaoById`/`getClosedSessaoById` e a lista `getSessoesComStatus`
+   (`findAll()` + um único `now()`, transportando `SessaoComStatus`) aplicam a mesma regra.
+   Não há nenhum `LocalDateTime.now()` da JVM no fluxo; não há status persistido nem job de
+   fechamento — o estado continua derivado somente de `expires_at`.
+8. **Janela de corrida no limite da expiração.** Entre a leitura do `now` do banco e a gravação
+   do voto existe uma janela de poucos milissegundos em que um voto pode ser gravado logo após a
+   expiração ter sido "vista" como aberta. É residual e pré-existente; a constraint
+   `uk_voto_sessao_documento` não tem relação com o tempo.
