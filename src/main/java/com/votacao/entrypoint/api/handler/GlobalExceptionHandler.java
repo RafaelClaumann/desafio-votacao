@@ -9,6 +9,7 @@ import com.votacao.application.model.exception.SessaoIsClosedException;
 import com.votacao.application.model.exception.SessaoIsOpenException;
 import com.votacao.application.model.exception.SessaoNotFoundException;
 import com.votacao.entrypoint.client.exception.HttpIntegrationException;
+import com.votacao.entrypoint.filter.MDCRequestFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,8 +31,6 @@ import java.util.List;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-
-    private static final String MDC_CORRELATION_ID_KEY = "correlationId";
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
@@ -136,9 +135,10 @@ public class GlobalExceptionHandler {
                 status.getReasonPhrase(),
                 message,
                 request.getRequestURI(),
-                MDC.get(MDC_CORRELATION_ID_KEY),
+                MDC.get(MDCRequestFilter.MDC_CORRELATION_ID_KEY),
                 fieldErrors
         );
         return ResponseEntity.status(status).body(body);
     }
+
 }

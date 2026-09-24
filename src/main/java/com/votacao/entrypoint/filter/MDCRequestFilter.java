@@ -20,7 +20,7 @@ public class MDCRequestFilter extends OncePerRequestFilter {
     private static final Logger log = LoggerFactory.getLogger(MDCRequestFilter.class);
 
     private static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
-    private static final String MDC_CORRELATION_ID_KEY = "correlationId";
+    public static final String MDC_CORRELATION_ID_KEY = "correlationId";
 
     @Override
     protected void doFilterInternal(
