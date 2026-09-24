@@ -150,3 +150,12 @@ Observações:
     500 ms e URL configuráveis em `app.documento-validator.*`
     (`DocumentoValidatorConfig`/`DocumentoValidatorProperties`). Como a simulação é aleatória e
     não há base real de associados, PF12 (titularidade) segue em aberto.
+11. **Correlação de logs por requisição (PF13 - parcial).** `MDCRequestFilter`
+    (`com.votacao.entrypoint.filter`) lê o header `X-Correlation-Id` (ou gera UUID) e popula o MDC
+    com `correlationId`, `requestMethod` e `requestURI`; `MDC.clear()` no `finally` evita vazamento
+    entre requisições na thread pool. O `logback-spring.xml` renderiza as chaves (pattern textual no
+    default; campos JSON via `LogstashEncoder` no prod), de modo que todas as linhas de uma
+    requisição — incluindo o `ERROR` do `GlobalExceptionHandler.handleGeneric()` — compartilham o
+    mesmo id. O `ApiError` **ainda não** expõe o id (o diagnóstico fica no log do servidor). O
+    `correlationId` é **gerado manualmente** (MDC); em branches futuros será migrado para o tracing
+    do Spring Boot (Micrometer).
