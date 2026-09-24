@@ -272,6 +272,20 @@ class GlobalExceptionHandlerTest {
     }
 
     @Nested
+    @DisplayName("Correlation id")
+    class CorrelationId {
+
+        @Test
+        @DisplayName("Should expose the correlation id from the MDC in the error body")
+        void shouldExposeCorrelationId_whenRequestHasHeader() throws Exception {
+            mockMvc.perform(get("/nao-existe").header("X-Correlation-Id", "correlation-123"))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.correlation_id").value("correlation-123"));
+        }
+
+    }
+
+    @Nested
     @DisplayName("Generic error")
     class ErroGenerico {
 
