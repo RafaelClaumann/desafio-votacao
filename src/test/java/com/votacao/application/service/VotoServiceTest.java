@@ -62,6 +62,23 @@ class VotoServiceTest {
     }
 
     @Test
+    @DisplayName("votar should save the vote when documento is valid, the session is open and the documento is new")
+    void votar_shouldSaveVote_whenValidDocumentoSessionIsOpenAndDocumentoIsNew() {
+        when(documentoValidator.isValidDocumento("12345678909")).thenReturn(true);
+        when(sessaoService.getOpenSessaoById(ID_SESSAO)).thenReturn(openSessao());
+        when(votoRepository.existsBySessaoIdAndDocumento(ID_SESSAO, "12345678909")).thenReturn(false);
+        when(votoRepository.save(any(Voto.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Voto result = votoService.votar(ID_SESSAO, "12345678909", Voto.Escolha.NAO);
+
+        assertEquals("12345678909", result.documento());
+        assertEquals(Voto.Escolha.NAO, result.escolhaVoto());
+        assertEquals(ID_SESSAO, result.sessao().id());
+        verify(votoRepository).existsBySessaoIdAndDocumento(ID_SESSAO, "12345678909");
+        verify(votoRepository).save(any(Voto.class));
+    }
+
+    @Test
     @DisplayName("votar should throw DuplicatedVoteException when the documento already voted in the session ignoring formatting")
     void votar_shouldReject_whenDocumentoAlreadyVotedInSessionIgnoringFormatting() {
         String documento = "123.456.789-09";
@@ -80,23 +97,6 @@ class VotoServiceTest {
                 exception.getMessage()
         );
         verify(votoRepository, never()).save(any(Voto.class));
-    }
-
-    @Test
-    @DisplayName("votar should save the vote when documento is valid, the session is open and the documento is new")
-    void votar_shouldSaveVote_whenValidDocumentoSessionIsOpenAndDocumentoIsNew() {
-        when(documentoValidator.isValidDocumento("12345678909")).thenReturn(true);
-        when(sessaoService.getOpenSessaoById(ID_SESSAO)).thenReturn(openSessao());
-        when(votoRepository.existsBySessaoIdAndDocumento(ID_SESSAO, "12345678909")).thenReturn(false);
-        when(votoRepository.save(any(Voto.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        Voto result = votoService.votar(ID_SESSAO, "12345678909", Voto.Escolha.NAO);
-
-        assertEquals("12345678909", result.documento());
-        assertEquals(Voto.Escolha.NAO, result.escolhaVoto());
-        assertEquals(ID_SESSAO, result.sessao().id());
-        verify(votoRepository).existsBySessaoIdAndDocumento(ID_SESSAO, "12345678909");
-        verify(votoRepository).save(any(Voto.class));
     }
 
     private Sessao openSessao() {
