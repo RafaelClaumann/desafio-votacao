@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 @Component
 public class SessaoRepositoryAdapter implements SessaoRepository {
@@ -49,11 +48,6 @@ public class SessaoRepositoryAdapter implements SessaoRepository {
     @Override
     public Optional<Sessao> findById(Long sessaoId) {
         return repository.findById(sessaoId).map(mapper::toDomain);
-    }
-
-    @Override
-    public Set<Long> findPautaIdsComSessao(List<Long> pautaIds) {
-        return repository.findPautaIdsComSessao(pautaIds);
     }
 
     @Override
