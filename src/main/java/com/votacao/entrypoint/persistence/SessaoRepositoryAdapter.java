@@ -46,8 +46,8 @@ public class SessaoRepositoryAdapter implements SessaoRepository {
     }
 
     @Override
-    public Optional<Sessao> findById(Long sessaoId) {
-        return repository.findById(sessaoId).map(mapper::toDomain);
+    public Optional<Sessao> findById(Long idSessao) {
+        return repository.findById(idSessao).map(mapper::toDomain);
     }
 
     @Override

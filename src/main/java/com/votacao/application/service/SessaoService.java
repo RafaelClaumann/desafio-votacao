@@ -50,24 +50,24 @@ public class SessaoService {
                 .toList();
     }
 
-    public Sessao getOpenSessaoById(Long sessaoId) {
-        Sessao sessao = sessaoRepository.findById(sessaoId)
-                .orElseThrow(() -> new SessaoNotFoundException(sessaoId));
+    public Sessao getOpenSessaoById(Long idSessao) {
+        Sessao sessao = sessaoRepository.findById(idSessao)
+                .orElseThrow(() -> new SessaoNotFoundException(idSessao));
 
         if (!sessao.isOpen(sessaoRepository.now())) {
-            throw new SessaoIsClosedException(sessaoId);
+            throw new SessaoIsClosedException(idSessao);
         }
 
-        log.info("Retornando Sessao aberta - sessaoId: {}", sessaoId);
+        log.info("Retornando Sessao aberta - idSessao: {}", idSessao);
         return sessao;
     }
 
-    public Sessao getClosedSessaoById(Long sessaoId) {
-        Sessao sessao = sessaoRepository.findById(sessaoId)
-                .orElseThrow(() -> new SessaoNotFoundException(sessaoId));
+    public Sessao getClosedSessaoById(Long idSessao) {
+        Sessao sessao = sessaoRepository.findById(idSessao)
+                .orElseThrow(() -> new SessaoNotFoundException(idSessao));
 
         if (sessao.isOpen(sessaoRepository.now())) {
-            throw new SessaoIsOpenException(sessaoId);
+            throw new SessaoIsOpenException(idSessao);
         }
 
         return sessao;

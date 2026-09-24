@@ -114,100 +114,100 @@ class SessaoServiceTest {
     @Test
     @DisplayName("getOpenSessaoById should return the session when it is open")
     void getOpenSessaoById_shouldReturnOpenSession() {
-        Long sessaoId = 1L;
-        Sessao sessao = new Sessao(sessaoId, PAUTA, BASE_DATE_TIME, BASE_DATE_TIME.plusMinutes(10));
+        Long idSessao = 1L;
+        Sessao sessao = new Sessao(idSessao, PAUTA, BASE_DATE_TIME, BASE_DATE_TIME.plusMinutes(10));
 
-        when(sessaoRepository.findById(sessaoId)).thenReturn(Optional.of(sessao));
+        when(sessaoRepository.findById(idSessao)).thenReturn(Optional.of(sessao));
         when(sessaoRepository.now()).thenReturn(BASE_DATE_TIME);
 
-        Sessao result = sessaoService.getOpenSessaoById(sessaoId);
+        Sessao result = sessaoService.getOpenSessaoById(idSessao);
 
         assertEquals(sessao, result);
-        verify(sessaoRepository).findById(sessaoId);
+        verify(sessaoRepository).findById(idSessao);
         verify(sessaoRepository).now();
     }
 
     @Test
     @DisplayName("getOpenSessaoById should throw SessaoNotFoundException when the session does not exist")
     void getOpenSessaoById_shouldThrowWhenSessionDoesNotExist() {
-        Long sessaoId = 1L;
+        Long idSessao = 1L;
 
-        when(sessaoRepository.findById(sessaoId)).thenReturn(Optional.empty());
+        when(sessaoRepository.findById(idSessao)).thenReturn(Optional.empty());
 
-        assertThrows(SessaoNotFoundException.class, () -> sessaoService.getOpenSessaoById(sessaoId));
+        assertThrows(SessaoNotFoundException.class, () -> sessaoService.getOpenSessaoById(idSessao));
 
-        verify(sessaoRepository).findById(sessaoId);
+        verify(sessaoRepository).findById(idSessao);
     }
 
     @Test
     @DisplayName("getOpenSessaoById should throw SessaoIsClosedException when the session is closed")
     void getOpenSessaoById_shouldThrowWhenSessionIsClosed() {
-        Long sessaoId = 1L;
-        Sessao closed = new Sessao(sessaoId, PAUTA, BASE_DATE_TIME.minusMinutes(20), BASE_DATE_TIME.minusMinutes(10));
+        Long idSessao = 1L;
+        Sessao closed = new Sessao(idSessao, PAUTA, BASE_DATE_TIME.minusMinutes(20), BASE_DATE_TIME.minusMinutes(10));
 
-        when(sessaoRepository.findById(sessaoId)).thenReturn(Optional.of(closed));
+        when(sessaoRepository.findById(idSessao)).thenReturn(Optional.of(closed));
         when(sessaoRepository.now()).thenReturn(BASE_DATE_TIME);
 
         SessaoIsClosedException exception = assertThrows(
                 SessaoIsClosedException.class,
-                () -> sessaoService.getOpenSessaoById(sessaoId)
+                () -> sessaoService.getOpenSessaoById(idSessao)
         );
 
-        assertEquals("A sessão " + sessaoId + " está fechada", exception.getMessage());
-        verify(sessaoRepository).findById(sessaoId);
+        assertEquals("A sessão " + idSessao + " está fechada", exception.getMessage());
+        verify(sessaoRepository).findById(idSessao);
         verify(sessaoRepository).now();
     }
 
     @Test
     @DisplayName("getClosedSessaoById should return the session when it is closed")
     void getClosedSessaoById_shouldReturnClosedSession() {
-        Long sessaoId = 1L;
-        Sessao closed = new Sessao(sessaoId, PAUTA, BASE_DATE_TIME.minusMinutes(20), BASE_DATE_TIME.minusMinutes(10));
+        Long idSessao = 1L;
+        Sessao closed = new Sessao(idSessao, PAUTA, BASE_DATE_TIME.minusMinutes(20), BASE_DATE_TIME.minusMinutes(10));
 
-        when(sessaoRepository.findById(sessaoId)).thenReturn(Optional.of(closed));
+        when(sessaoRepository.findById(idSessao)).thenReturn(Optional.of(closed));
         when(sessaoRepository.now()).thenReturn(BASE_DATE_TIME);
 
-        Sessao result = sessaoService.getClosedSessaoById(sessaoId);
+        Sessao result = sessaoService.getClosedSessaoById(idSessao);
 
         assertEquals(closed, result);
-        verify(sessaoRepository).findById(sessaoId);
+        verify(sessaoRepository).findById(idSessao);
         verify(sessaoRepository).now();
     }
 
     @Test
     @DisplayName("getClosedSessaoById should throw SessaoIsOpenException when the session is still open")
     void getClosedSessaoById_shouldThrowWhenSessionIsOpen() {
-        Long sessaoId = 1L;
-        Sessao open = new Sessao(sessaoId, PAUTA, BASE_DATE_TIME, BASE_DATE_TIME.plusMinutes(10));
+        Long idSessao = 1L;
+        Sessao open = new Sessao(idSessao, PAUTA, BASE_DATE_TIME, BASE_DATE_TIME.plusMinutes(10));
 
-        when(sessaoRepository.findById(sessaoId)).thenReturn(Optional.of(open));
+        when(sessaoRepository.findById(idSessao)).thenReturn(Optional.of(open));
         when(sessaoRepository.now()).thenReturn(BASE_DATE_TIME);
 
         SessaoIsOpenException exception = assertThrows(
                 SessaoIsOpenException.class,
-                () -> sessaoService.getClosedSessaoById(sessaoId)
+                () -> sessaoService.getClosedSessaoById(idSessao)
         );
 
-        assertEquals("A sessão " + sessaoId + " ainda está aberta", exception.getMessage());
-        verify(sessaoRepository).findById(sessaoId);
+        assertEquals("A sessão " + idSessao + " ainda está aberta", exception.getMessage());
+        verify(sessaoRepository).findById(idSessao);
         verify(sessaoRepository).now();
     }
 
     @Test
     @DisplayName("getOpenSessaoById should propagate the repository exception")
     void getOpenSessaoById_shouldPropagateRepositoryException() {
-        Long sessaoId = 1L;
+        Long idSessao = 1L;
         IllegalStateException repositoryException = new IllegalStateException("Repository unavailable");
 
-        when(sessaoRepository.findById(sessaoId)).thenThrow(repositoryException);
+        when(sessaoRepository.findById(idSessao)).thenThrow(repositoryException);
 
         IllegalStateException exception = assertThrows(
                 IllegalStateException.class,
-                () -> sessaoService.getOpenSessaoById(sessaoId)
+                () -> sessaoService.getOpenSessaoById(idSessao)
         );
 
         assertEquals(repositoryException, exception);
-        verify(sessaoRepository).findById(sessaoId);
+        verify(sessaoRepository).findById(idSessao);
     }
 
     @Test

@@ -14,7 +14,7 @@ public interface SessaoRepository {
 
     List<Sessao> findAll();
 
-    Optional<Sessao> findById(Long sessaoId);
+    Optional<Sessao> findById(Long idSessao);
 
     LocalDateTime now();
 
