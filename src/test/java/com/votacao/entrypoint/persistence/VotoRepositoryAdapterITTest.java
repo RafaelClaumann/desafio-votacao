@@ -65,7 +65,7 @@ class VotoRepositoryAdapterITTest {
         );
 
         assertEquals(
-                "Duplicated vote for document: " + documento + " in session with id: " + session.id(),
+                "O documento " + documento + " já votou na sessão " + session.id(),
                 exception.getMessage()
         );
     }

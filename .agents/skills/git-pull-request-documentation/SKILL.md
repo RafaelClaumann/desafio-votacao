@@ -1,5 +1,5 @@
 ---
-name: pull-request-documentation
+name: git-pull-request-documentation
 description: Analyze code changes and generate standardized, clear, and concise Pull Request descriptions for software projects.
 ---
 

@@ -88,7 +88,7 @@ class PautaServiceTest {
                 () -> service.getPautaById(pautaId)
         );
 
-        assertEquals("Pauta not found with id: " + pautaId, exception.getMessage());
+        assertEquals("Pauta com id " + pautaId + " não encontrada", exception.getMessage());
         verify(repository).findById(pautaId);
     }
 

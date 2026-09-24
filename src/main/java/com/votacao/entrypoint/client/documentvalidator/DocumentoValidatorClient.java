@@ -40,9 +40,9 @@ public class DocumentoValidatorClient implements DocumentoValidator {
         } catch (HttpClientErrorException ex) {
             return false;
         } catch (HttpServerErrorException ex) {
-            throw new HttpIntegrationException(ex.getStatusCode(), ex.getMessage());
+            throw new HttpIntegrationException(ex.getStatusCode());
         } catch (ResourceAccessException ex) {
-            throw new HttpIntegrationException(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
+            throw new HttpIntegrationException(HttpStatus.SERVICE_UNAVAILABLE);
         }
         return true;
     }
