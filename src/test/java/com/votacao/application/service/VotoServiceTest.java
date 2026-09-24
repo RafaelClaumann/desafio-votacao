@@ -6,6 +6,7 @@ import com.votacao.application.model.Pauta;
 import com.votacao.application.model.Sessao;
 import com.votacao.application.model.Voto;
 import com.votacao.application.model.exception.DuplicatedVoteException;
+import com.votacao.application.model.exception.InvalidDocumentoException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -96,6 +97,26 @@ class VotoServiceTest {
                 "Duplicated vote for document: 12345678909 in session with id: " + ID_SESSAO,
                 exception.getMessage()
         );
+        verify(votoRepository, never()).save(any(Voto.class));
+    }
+
+    @Test
+    @DisplayName("votar should throw InvalidDocumentoException when the documento is invalid")
+    void votar_shouldReject_whenDocumentoIsNotValid() {
+        String documento = "123.456.789-09";
+
+        when(documentoValidator.isValidDocumento("12345678909")).thenReturn(false);
+
+        InvalidDocumentoException exception = assertThrows(
+                InvalidDocumentoException.class,
+                () -> votoService.votar(ID_SESSAO, documento, Voto.Escolha.SIM)
+        );
+
+        assertEquals(
+                "Documento inválido: " + documento,
+                exception.getMessage()
+        );
+        verify(sessaoService, never()).getOpenSessaoById(any(Long.class));
         verify(votoRepository, never()).save(any(Voto.class));
     }
 
