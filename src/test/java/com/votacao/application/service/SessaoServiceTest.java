@@ -6,7 +6,9 @@ import com.votacao.application.model.Sessao;
 import com.votacao.application.model.exception.DuplicatedSessaoException;
 import com.votacao.application.model.exception.PautaNotFoundException;
 import com.votacao.application.model.exception.SessaoIsClosedException;
+import com.votacao.application.model.exception.SessaoIsOpenException;
 import com.votacao.application.model.exception.SessaoNotFoundException;
+import com.votacao.application.service.query.SessaoComStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,13 +17,15 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -40,14 +44,19 @@ class SessaoServiceTest {
     @InjectMocks
     private SessaoService sessaoService;
 
+    private static final LocalDateTime BASE_DATE_TIME = LocalDateTime.of(2026, 9, 23, 10, 0);
+    private static final Pauta PAUTA = new Pauta(2L, "Reforma estatutária do capítulo quatro", 10L);
+
     @Test
     @DisplayName("saveSessao should create and save a session with the pauta duration")
     void saveSessao_shouldCreateAndSaveSessionWithPautaDuration() {
         Long pautaId = 1L;
         Pauta pauta = new Pauta(pautaId, "Reforma estatutária do capítulo quatro", 10L);
+        LocalDateTime now = LocalDateTime.of(2026, 9, 23, 10, 0);
 
         when(pautaService.getPautaById(pautaId)).thenReturn(pauta);
         when(sessaoRepository.existsByPautaId(pautaId)).thenReturn(false);
+        when(sessaoRepository.now()).thenReturn(now);
         when(sessaoRepository.save(any(Sessao.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Sessao result = sessaoService.saveSessao(pautaId);
@@ -59,10 +68,8 @@ class SessaoServiceTest {
         assertAll(
                 () -> assertEquals(pauta, savedSession.pauta()),
                 () -> assertEquals(pauta, result.pauta()),
-                () -> assertEquals(
-                        Duration.ofMinutes(pauta.tempoVotacaoMinutos()),
-                        Duration.between(savedSession.startedAt(), savedSession.expiresAt())
-                ),
+                () -> assertEquals(now, savedSession.startedAt()),
+                () -> assertEquals(now.plusMinutes(pauta.tempoVotacaoMinutos()), savedSession.expiresAt()),
                 () -> assertEquals(savedSession.startedAt(), result.startedAt()),
                 () -> assertEquals(savedSession.expiresAt(), result.expiresAt())
         );
@@ -108,14 +115,16 @@ class SessaoServiceTest {
     @DisplayName("getOpenSessaoById should return the session when it is open")
     void getOpenSessaoById_shouldReturnOpenSession() {
         Long sessaoId = 1L;
-        Sessao sessao = openSessao(sessaoId);
+        Sessao sessao = new Sessao(sessaoId, PAUTA, BASE_DATE_TIME, BASE_DATE_TIME.plusMinutes(10));
 
         when(sessaoRepository.findById(sessaoId)).thenReturn(Optional.of(sessao));
+        when(sessaoRepository.now()).thenReturn(BASE_DATE_TIME);
 
         Sessao result = sessaoService.getOpenSessaoById(sessaoId);
 
         assertEquals(sessao, result);
         verify(sessaoRepository).findById(sessaoId);
+        verify(sessaoRepository).now();
     }
 
     @Test
@@ -134,19 +143,54 @@ class SessaoServiceTest {
     @DisplayName("getOpenSessaoById should throw SessaoIsClosedException when the session is closed")
     void getOpenSessaoById_shouldThrowWhenSessionIsClosed() {
         Long sessaoId = 1L;
-        LocalDateTime now = LocalDateTime.now();
-        Sessao sessao = new Sessao(
-                sessaoId,
-                new Pauta(2L, "Reforma estatutária do capítulo quatro", 10L),
-                now.minusMinutes(11),
-                now.minusMinutes(1)
+        Sessao closed = new Sessao(sessaoId, PAUTA, BASE_DATE_TIME.minusMinutes(20), BASE_DATE_TIME.minusMinutes(10));
+
+        when(sessaoRepository.findById(sessaoId)).thenReturn(Optional.of(closed));
+        when(sessaoRepository.now()).thenReturn(BASE_DATE_TIME);
+
+        SessaoIsClosedException exception = assertThrows(
+                SessaoIsClosedException.class,
+                () -> sessaoService.getOpenSessaoById(sessaoId)
         );
 
-        when(sessaoRepository.findById(sessaoId)).thenReturn(Optional.of(sessao));
-
-        assertThrows(SessaoIsClosedException.class, () -> sessaoService.getOpenSessaoById(sessaoId));
-
+        assertEquals("Sessão with id: " + sessaoId + " is closed", exception.getMessage());
         verify(sessaoRepository).findById(sessaoId);
+        verify(sessaoRepository).now();
+    }
+
+    @Test
+    @DisplayName("getClosedSessaoById should return the session when it is closed")
+    void getClosedSessaoById_shouldReturnClosedSession() {
+        Long sessaoId = 1L;
+        Sessao closed = new Sessao(sessaoId, PAUTA, BASE_DATE_TIME.minusMinutes(20), BASE_DATE_TIME.minusMinutes(10));
+
+        when(sessaoRepository.findById(sessaoId)).thenReturn(Optional.of(closed));
+        when(sessaoRepository.now()).thenReturn(BASE_DATE_TIME);
+
+        Sessao result = sessaoService.getClosedSessaoById(sessaoId);
+
+        assertEquals(closed, result);
+        verify(sessaoRepository).findById(sessaoId);
+        verify(sessaoRepository).now();
+    }
+
+    @Test
+    @DisplayName("getClosedSessaoById should throw SessaoIsOpenException when the session is still open")
+    void getClosedSessaoById_shouldThrowWhenSessionIsOpen() {
+        Long sessaoId = 1L;
+        Sessao open = new Sessao(sessaoId, PAUTA, BASE_DATE_TIME, BASE_DATE_TIME.plusMinutes(10));
+
+        when(sessaoRepository.findById(sessaoId)).thenReturn(Optional.of(open));
+        when(sessaoRepository.now()).thenReturn(BASE_DATE_TIME);
+
+        SessaoIsOpenException exception = assertThrows(
+                SessaoIsOpenException.class,
+                () -> sessaoService.getClosedSessaoById(sessaoId)
+        );
+
+        assertEquals("Sessão with id: " + sessaoId + " is open", exception.getMessage());
+        verify(sessaoRepository).findById(sessaoId);
+        verify(sessaoRepository).now();
     }
 
     @Test
@@ -166,14 +210,26 @@ class SessaoServiceTest {
         verify(sessaoRepository).findById(sessaoId);
     }
 
-    private Sessao openSessao(Long sessaoId) {
-        LocalDateTime now = LocalDateTime.now();
-        return new Sessao(
-                sessaoId,
-                new Pauta(2L, "Reforma estatutária do capítulo quatro", 10L),
-                now,
-                now.plusMinutes(10)
+    @Test
+    @DisplayName("getSessoesComStatus should pair each session with its open status")
+    void getSessoesComStatus_shouldPairSessionsWithOpenStatus() {
+        Sessao open = new Sessao(1L, PAUTA, BASE_DATE_TIME, BASE_DATE_TIME.plusMinutes(10));
+        Sessao closed = new Sessao(2L, PAUTA, BASE_DATE_TIME.minusMinutes(20), BASE_DATE_TIME.minusMinutes(10));
+
+        when(sessaoRepository.findAll()).thenReturn(List.of(open, closed));
+        when(sessaoRepository.now()).thenReturn(BASE_DATE_TIME);
+
+        List<SessaoComStatus> result = sessaoService.getSessoesComStatus();
+
+        assertAll(
+                () -> assertEquals(2, result.size()),
+                () -> assertEquals(open, result.get(0).sessao()),
+                () -> assertTrue(result.get(0).isOpen()),
+                () -> assertEquals(closed, result.get(1).sessao()),
+                () -> assertFalse(result.get(1).isOpen())
         );
+        verify(sessaoRepository).findAll();
+        verify(sessaoRepository).now();
     }
 
 }

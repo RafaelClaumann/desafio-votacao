@@ -48,7 +48,8 @@ POST /pautas
 
 **Evidência**: `PautaRequestDTO` (`@Positive tempoVotacaoMinutos`, `@NotNull`);
 teste `PautaRequestDTOValidationTest`; `SessaoService.saveSessao()`
-(`now.plusMinutes(dur)`), `Sessao.isOpen()` (`now.isBefore(expiresAt)`), R5.
+(`now.plusMinutes(dur)`, com `now` vindo do relógio do banco), abertura condicionada a
+`expires_at > CURRENT_TIMESTAMP` (R7/R8), R5.
 
 ---
 
@@ -296,24 +297,39 @@ formatação distinta.
 
 ---
 
-## PF9 — Fechamento da sessão depende do relógio do servidor
+## PF9 — (RESOLVIDO) Fechamento da sessão depende do relógio do servidor
 
-**Gatilho**
+**Status: corrigido** — o **relógio do banco de dados** passou a ser a única autoridade de hora
+do sistema, e a regra "a sessão está aberta?" voltou a viver **no domínio**. Não há mais
+`LocalDateTime.now()` da JVM de quem atende a requisição.
 
-Execução distribuída (mais de uma instância) ou relógio com desvio.
+**Comportamento anterior**
 
-**O que acontece**
+O estado aberta/fechada era **derivado** de `LocalDateTime.now()` (relógio local de quem
+processa a requisição), sempre. Não havia relógio centralizado nem job de fechamento: cada
+instância/servidor podia "ver" uma borda de expiração diferente. Um relógio adiantado fechava a
+sessão cedo; um atrasado deixava aceitando votos além da expiração. O mesmo valia para o campo
+`is_open` da resposta (`SessaoMapper.toDTO` também usava `LocalDateTime.now()`).
 
-O estado aberta/fechada é **derivado** de `LocalDateTime.now()` (relógio local de quem
-processa a requisição), sempre. Não há relógio centralizado nem job de fechamento: cada
-instância/servidor pode "ver" uma borda de expiração diferente. Um relógio adiantado fecha a
-sessão cedo; um atrasado deixa aceitando votos além da expiração.
+**Comportamento atual**
 
-**Impacto**: Média — em single-node o efeito é desprezível; em cluster, pode haver divergência
-entre votação e apuração.
+O "agora" do sistema é o `CURRENT_TIMESTAMP` do banco (único, compartilhado por todas as
+instâncias). A regra de negócio "está aberta?" é um **método puro do domínio** —
+`Sessao.isOpen(now)` (`now.isBefore(expiresAt)`) — e o `now` vem sempre do banco
+(`SessaoRepository.now()`). Quem vota/apura consulta a sessão e avalia a regra com esse relógio
+(`SessaoService.getOpenSessaoById`/`getClosedSessaoById`); quem lista sessões calcula o `is_open`
+com um único `now()`. Todas as instâncias veem a mesma borda de expiração, sem espalhar a regra
+em queries SQL.
 
-**Evidência**: `Sessao.isOpen(LocalDateTime.now())`, `SessaoMapper.toDTO` (`LocalDateTime.now()`
-na resposta), ausência de UUID/timestamp distribuído.
+**Impacto**: originalmente Média — corrigido; a borda de fechamento é única (relógio centralizado
+no banco) e a regra fica central e visível no domínio. Em single-node o comportamento observado
+não muda.
+
+**Evidência**: `Sessao.isOpen(LocalDateTime)` (regra no domínio), `SpringDataSessaoRepository.now`
+(`SELECT CURRENT_TIMESTAMP`), `SessaoRepositoryAdapter` (delegação), `SessaoService`
+(`getOpenSessaoById`/`getClosedSessaoById`/`saveSessao`/`getSessoesComStatus`), `SessaoMapper`
+(mapeia `SessaoComStatus`, sem `LocalDateTime.now()`); testes `SessaoServiceTest`
+(com `now()` fixo) e `SessaoRepositoryAdapterITTest` (`now` do banco).
 
 ---
 
@@ -425,13 +441,13 @@ fechada" possuem cobertura (`getOpenSessaoById*`).
 | 6 | Divergência case-sensitive de título        | corrida com caixa variada        | **Corrigido** — índice único `LOWER(titulo)` | Corrigida |
 | 7 | Unicidade de CPF divergente (entidade/schema) | leitura/geração de DDL          | **Corrigido** — entidade declara `uk_voto_sessao_documento` | Corrigida |
 | 8 | CPF sem normalização                        | mesma pessoa, formatos diferentes | **Corrigido** — `VotoService` normaliza antes do check | Corrigida |
-| 9 | Fechamento depende do relógio local         | cluster/desvio de clock          | Fronteiras de exclusão divergentes         | Média   |
+| 9 | Fechamento depende do relógio local         | cluster/desvio de clock          | **Corrigido** — relógio do banco (`CURRENT_TIMESTAMP`) | Corrigida |
 | 10 | Sessão sem votos → EMPATE                   | zero participação                | Empate silencioso                          | Baixa   |
 | 11 | `hasSessao` não exposto                     | consulta de pautas               | Necessário cruzamento com `/sessoes`       | Baixa   |
 | 12 | CPF autodeclarado (sem verificação)         | votação                          | Sem confirmação de titularidade            | Baixa   |
 | 13 | Erros 500 genéricos / mensagens mistas      | exceções não mapeadas            | Diagnóstico dificultado                    | Baixa   |
 | 14 | Testes desatualizados                       | evolução de código               | **Corrigido** — `SessaoServiceTest` alinhado    | Corrigida |
 
-**Recomendação de prioridade:** PF1, PF2, PF3, PF4, PF5, PF6, PF7, PF8 e PF14 estão corrigidos.
-Próximos candidatos: PF9 (fechamento por relógio local, se houver cluster) e PF12 (CPF
-autodeclarado).
+**Recomendação de prioridade:** PF1, PF2, PF3, PF4, PF5, PF6, PF7, PF8, PF9 e PF14 estão
+corrigidos. Próximos candidatos: PF10 (EMPATE silencioso sem votos) e PF12 (CPF autodeclarado),
+além de PF13 (mensagens de erro heterogêneas).

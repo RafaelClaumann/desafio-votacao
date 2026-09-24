@@ -19,7 +19,8 @@ um tema/assunto que será deliberado por meio de votação associada. O fluxo ge
    total de votos NÃO e o status (aprovada, rejeitada ou empate).
 
 Os estados da sessão (aberta/fechada) **não são armazenados**: são derivados em tempo de
-execução pela comparação do horário atual com o horário de expiração.
+execução pela comparação da expiração com o **relógio do banco de dados** (`CURRENT_TIMESTAMP`,
+única autoridade de hora do sistema — consistente para todas as instâncias).
 
 ## Conceitos de Negócio
 
@@ -67,6 +68,7 @@ execução pela comparação do horário atual com o horário de expiração.
 | [api-operacoes.md](api-operacoes.md)             | Operações da API REST e como acionam as regras de negócio.      |
 | [erros-e-rejeicoes.md](erros-e-rejeicoes.md)     | Motivos de rejeição e mapeamento de erros HTTP.                 |
 | [traceabilidade.md](traceabilidade.md)           | Mapa regra → implementação, índices do banco e observações do código. |
+| [decisao-relogio-da-sessao.md](decisao-relogio-da-sessao.md) | Decisão técnica: por que a "hora atual" da sessão vem do relógio do banco (contexto, alternativas e trade-offs). |
 
 ## Observações Importantes
 

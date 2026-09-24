@@ -25,7 +25,8 @@ Objetivo: abrir o período de coleta de votos de uma pauta existente.
 1. O organizador informa o identificador da **pauta**.
 2. O sistema verifica se a pauta **existe**.
 3. O sistema verifica se a pauta **ainda não possui** uma sessão de votação.
-4. O sistema cria a sessão com **início = agora** e **expiração = agora + duração da pauta**.
+4. O sistema cria a sessão com **início = agora** (relógio do banco) e **expiração = agora +
+   duração da pauta**.
 5. A sessão é persistida (o banco impede mais de uma sessão por pauta).
 6. A sessão fica **aberta** e passa a aceitar votos (desde que a duração seja positiva).
 
@@ -44,7 +45,8 @@ Objetivo: registrar a manifestação de um associado em uma sessão aberta.
 2. O sistema valida a entrada: sessão obrigatória, CPF bem-formado, escolha obrigatória e
    somente SIM ou NÃO.
 3. O sistema verifica se a **sessão existe**.
-4. O sistema verifica se a **sessão está aberta** (horário atual anterior à expiração).
+4. O sistema verifica se a **sessão está aberta** (pelo relógio do banco, a expiração ainda
+   não foi alcançada).
 5. O sistema verifica se o **mesmo CPF já votou nesta sessão**.
 6. O voto é persistido (o banco reforça a unicidade por sessão/documento).
 7. O voto passa a integrar a apuração futura da sessão.
@@ -62,7 +64,8 @@ Objetivo: divulgar o resultado de uma sessão já encerrada.
 
 1. O organizador informa o identificador da **sessão**.
 2. O sistema verifica se a **sessão existe**.
-3. O sistema verifica se a **sessão está fechada** (horário atual já passou da expiração).
+3. O sistema verifica se a **sessão está fechada** (pelo relógio do banco, a expiração já foi
+   alcançada).
 4. O sistema conta os votos **SIM** e os votos **NÃO** registrados na sessão.
 5. O sistema calcula o **total de votos** e o **status**:
    - SIM > NÃO → **APROVADA**
@@ -82,6 +85,7 @@ Objetivo: visualizar as pautas e sessões existentes.
 
 1. **Listar pautas**: o sistema retorna todas as pautas criadas, com título e duração.
 2. **Listar sessões**: o sistema retorna todas as sessões criadas, com a pauta relacionada,
-   os horários de início/expiração e o indicador de aberta/fechada no momento da consulta.
+   os horários de início/expiração e o indicador de aberta/fechada no momento da consulta
+   (calculado pelo relógio do banco, consistente para todas as instâncias).
 
 Não há restrição de negócio para consulta — são listas simples de leitura.

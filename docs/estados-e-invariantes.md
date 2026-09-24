@@ -3,11 +3,12 @@
 ## Estados da Sessão de Votação
 
 A sessão possui **dois estados de negócio**, que **não são persistidos** nem controlados por
-agendador: são **derivados do tempo** no momento da consulta.
+agendador: são **derivados do tempo** no momento da consulta, usando como "agora" o relógio do
+banco de dados (`CURRENT_TIMESTAMP`), único e comum a todas as instâncias (PF9 resolvido).
 
 ```
 ABERTA
-   │   (o horário atual atinge os horário de expiração)
+   │   (o relógio do banco atinge a expiração)
    ▼
 FECHADA   (terminal)
 ```
@@ -18,7 +19,7 @@ FECHADA   (terminal)
 | ------------------------ | ----------------------------------------------------------------------------------------------- |
 | Estado inicial           | **ABERTA** no momento da criação, desde que a duração da pauta seja positiva (expiração futura). |
 | Entrada em ABERTA        | Somente pela criação da sessão (não existe sessão "agendada" — a sessão já nasce valendo).       |
-| Transição ABERTA → FECHADA | Ocorre automaticamente quando `agora >= expiresAt`. No instante exato da expiração a sessão já está fechada. |
+| Transição ABERTA → FECHADA | Ocorre automaticamente quando o relógio do banco atinge `expiresAt` (`expires_at > CURRENT_TIMESTAMP` deixa de ser verdade). No instante exato da expiração a sessão já está fechada. |
 | Retorno FECHADA → ABERTA | Não existe. **FECHADA é terminal.**                                                             |
 | Duração 0 ou negativa    | A sessão nasce **fechada** (nunca chega a ficar aberta de fato).                                 |
 
@@ -62,7 +63,7 @@ ou o banco impede a gravação.
 | I7 | Votos só existem vinculados a uma sessão existente.                         | FK `votos.sessao_id → sessoes.id`.                                                                                      | Voto recusado (400), pois a sessão é validada antes.              |
 | I8 | No máximo um voto por (sessão, documento).                                  | Verificação em `VotoService` + constraint única `UNIQUE(sessao_id, documento)`.                                         | Voto recusado (409).                                              |
 | I9 | Todo voto é SIM ou NÃO.                                                     | Enum `Voto.Escolha`.                                                                                                    | Requisição recusada (400) na desserialização.                     |
-| I10 | Sessão fechada nunca volta a aceitar votos.                                 | `Sessao.isOpen(now)` compara com o horário atual a cada operação.                                                       | Votos rejeitados (400); não há mecanismo de reabertura.           |
+| I10 | Sessão fechada nunca volta a aceitar votos.                                 | `Sessao.isOpen(now)` (regra no domínio) com `now` de `SessaoRepository.now()`, a cada operação.                            | Votos rejeitados (400); não há mecanismo de reabertura.           |
 | I11 | O resultado de uma sessão aberta nunca é divulgado.                         | `SessaoService.getClosedSessaoById()` antes da apuração.                                                                | Apuração recusada (400) enquanto aberta.                          |
 
 ## Condições sempre válidas na criação

@@ -4,6 +4,7 @@ import com.votacao.application.model.Sessao;
 import com.votacao.application.service.SessaoService;
 import com.votacao.application.service.VotoService;
 import com.votacao.application.service.query.ApuracaoSessao;
+import com.votacao.application.service.query.SessaoComStatus;
 import com.votacao.entrypoint.api.dto.ResultadoVotacaoResponse;
 import com.votacao.entrypoint.api.dto.SessaoDTO;
 import com.votacao.entrypoint.api.dto.SessaoResponseDTO;
@@ -45,13 +46,12 @@ public class SessaoController {
                 .buildAndExpand(saved.id())
                 .toUri();
 
-        return ResponseEntity.created(location).body(mapper.toDTO(saved));
+        return ResponseEntity.created(location).body(mapper.toDTO(new SessaoComStatus(saved, true)));
     }
 
     @GetMapping
     public ResponseEntity<List<SessaoResponseDTO>> fetch() {
-        List<Sessao> sessoes = service.getSessoes();
-        return ResponseEntity.ok(mapper.toDTOList(sessoes));
+        return ResponseEntity.ok(mapper.toDTOList(service.getSessoesComStatus()));
     }
 
     @GetMapping("/{idSessao}/resultado")

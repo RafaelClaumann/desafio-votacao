@@ -129,9 +129,9 @@ Uma pauta válida é selecionada para abertura de sessão.
 
 **Comportamento**
 
-A sessão passa a valer a partir de **agora** e tem como expiração **agora + duração de
-votação (em minutos) definida na pauta**. Se a duração for positiva, a sessão fica aberta
-pelo tempo configurado.
+A sessão passa a valer a partir de **agora** (o relógio do banco de dados) e tem como
+expiração **agora + duração de votação (em minutos) definida na pauta**. Se a duração for
+positiva, a sessão fica aberta pelo tempo configurado.
 
 **Violação**
 
@@ -146,7 +146,8 @@ exceda o intervalo representável do `LocalDateTime` ao abrir a sessão (PF2 cor
 **Implementação**
 
 `PautaRequestDTO` (`@Positive` + `@Max` em `tempoVotacaoMinutos`, com `@NotNull`);
-`SessaoService.saveSessao()` = `LocalDateTime.now().plusMinutes(pauta.tempoVotacaoMinutos())`.
+`SessaoService.saveSessao()` = `sessaoRepository.now().plusMinutes(pauta.tempoVotacaoMinutos())`
+(o "agora" vem do `CURRENT_TIMESTAMP` do banco — PF9 resolvido).
 
 ## Votação
 
@@ -167,13 +168,14 @@ Se a sessão estiver fechada, o voto é recusado (HTTP 400) e **nada é registra
 **Implementação**
 
 `VotoService.votar()` → `SessaoService.getOpenSessaoById()`, que lança `SessaoIsClosedException`.
-A exceção é uma regra de negócio verificada contra o horário atual.
+A exceção é regra de negócio do domínio (`Sessao.isOpen(now)`), avaliada com o **relógio do banco
+de dados** (`SessaoRepository.now()` = `CURRENT_TIMESTAMP` — PF9 resolvido).
 
 ### R8 — Ao atingir a expiração, a sessão fecha e nunca mais aceita votos
 
 **Condição**
 
-O relógio atinge o horário de expiração (ou já passou dele).
+O relógio do banco de dados atinge o horário de expiração (ou já passou dele).
 
 **Comportamento**
 
@@ -187,8 +189,11 @@ fechado é terminal. Não existem agentes externos para fechar/reabrir manualmen
 
 **Implementação**
 
-`Sessao.isOpen(now)` — a sessão está aberta somente enquanto `now` for **estritamente anterior**
-a `expiresAt`. No instante exato da expiração a sessão já é considerada fechada.
+`Sessao.isOpen(now)` (domínio: `now.isBefore(expiresAt)`), com `now` de
+`SessaoRepository.now()` (`SELECT CURRENT_TIMESTAMP`) — a sessão está aberta somente enquanto,
+pelo relógio do banco, `expiresAt` é estritamente posterior a `CURRENT_TIMESTAMP`. No instante
+exato da expiração a sessão já é considerada fechada. Não existe comparação com
+`LocalDateTime.now()` do servidor (PF9 resolvido).
 
 ### R9 — Somente associados com CPF válido podem votar
 
@@ -276,7 +281,8 @@ Se a sessão existir e estiver fechada, o resultado é calculado a partir dos vo
 **Implementação**
 
 `VotoService.apurarVotosSessao()` → `SessaoService.getClosedSessaoById()`, que lança
-`SessaoNotFoundException` ou `SessaoIsOpenException`.
+`SessaoNotFoundException` ou `SessaoIsOpenException` (estado fechado avaliado por `Sessao.isOpen(now)`
+com `now` do relógio do banco — PF9 resolvido).
 
 ### R13 — O status do resultado é definido pela maioria simples
 
