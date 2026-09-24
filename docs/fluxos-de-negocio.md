@@ -85,8 +85,8 @@ Rejeições possíveis: sessão inexistente (400) · sessão ainda aberta (400).
 Objetivo: visualizar as pautas e sessões existentes.
 
 1. **Listar pautas**: o sistema retorna todas as pautas criadas, com título e duração.
-2. **Listar sessões**: o sistema retorna todas as sessões criadas, com a pauta relacionada,
-   os horários de início/expiração e o indicador de aberta/fechada no momento da consulta
-   (calculado pelo relógio do banco, consistente para todas as instâncias).
+2. **Listar sessões**: o sistema retorna todas as sessões criadas, com a pauta relacionada
+   (id e título), os horários de início/expiração e o indicador de aberta/fechada no momento da
+   consulta (calculado pelo relógio do banco, consistente para todas as instâncias).
 
 Não há restrição de negócio para consulta — são listas simples de leitura.

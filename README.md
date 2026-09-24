@@ -155,6 +155,7 @@ curl -X POST http://localhost:8080/sessoes \
 {
   "id": 1,
   "id_pauta": 1,
+  "titulo_pauta": "Reforma estatutária do capítulo quatro",
   "started_at": "2026-09-23T10:00:00",
   "expires_at": "2026-09-23T10:10:00",
   "is_open": true
@@ -162,6 +163,7 @@ curl -X POST http://localhost:8080/sessoes \
 ```
 
 `is_open` é calculado no momento da resposta: `true` enquanto `agora < expires_at`.
+`titulo_pauta` traz o título da pauta votada, para facilitar a leitura da sessão.
 
 **Erros:**
 
@@ -176,7 +178,7 @@ curl -X POST http://localhost:8080/sessoes \
 
 **`GET /sessoes`**
 
-Retorna todas as sessões criadas, com o estado no momento da consulta.
+Retorna todas as sessões criadas, com o estado no momento da consulta e o título da pauta.
 
 **curl:**
 
@@ -191,6 +193,7 @@ curl http://localhost:8080/sessoes
   {
     "id": 1,
     "id_pauta": 1,
+    "titulo_pauta": "Reforma estatutária do capítulo quatro",
     "started_at": "2026-09-23T10:00:00",
     "expires_at": "2026-09-23T10:10:00",
     "is_open": false
