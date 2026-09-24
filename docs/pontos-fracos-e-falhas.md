@@ -404,14 +404,20 @@ Qualquer pessoa com um CPF bem-formado (inclusive o próprio CPF alheio) vota.
 
 **O que acontece**
 
-O sistema valida apenas o **formato** do CPF (`@CPF`). Não há integração com cadastro de
-associados nem confirmação de titularidade — o voto é registrado com base no documento
-autodeclarado.
+O sistema valida o **formato** do CPF (`@CPF`) e também submete o documento a um **validador
+externo** (`DocumentoValidator` → `DocumentoValidatorClient`). Essa integração, porém, é
+**fictícia**: usa `https://httpbin.org`, que responde 200/400/404 de forma **aleatória**, sem
+consultar nenhuma base real de associados. A "decisão" de validar ou rejeitar o CPF não tem
+relação com a titularidade — na prática o voto continua sendo registrado com base no documento
+autodeclarado, apenas com uma etapa aleatória adicional.
 
 **Impacto**: Baixa — limitação de escopo da aplicação, não um erro de implementação; deve ser
-lida como regra implícita: "o CPF identifica o eleitor por autodeclaração".
+lida como regra implícita: "o CPF identifica o eleitor por autodeclaração". A validação externa
+é apenas uma **simulação** da integração e não deve ser tratada como confirmação de titularidade.
 
-**Evidência**: não existe repositório/endpoint de associados; `VotoDTO` usa somente `@CPF`.
+**Evidência**: `DocumentoValidatorClient` chama `https://httpbin.org/status/200,400,404,500` e
+`/anything` (resultado aleatório); não existe repositório/endpoint de associados; `VotoDTO` usa
+`@CPF`.
 
 ---
 
@@ -423,14 +429,15 @@ Qualquer exceção não mapeada ou falha interna.
 
 **O que acontece**
 
-O `GlobalExceptionHandler` responde "Erro interno do servidor" e **não expõe a causa** para
-cenários de negócio. As mensagens de exceção também são heterogêneas (português para pauta
-duplicada, inglês para os demais), dificultando o tratamento uniforme no cliente.
+O `GlobalExceptionHandler` mapeia as exceções de negócio e a `HttpIntegrationException` (503),
+mas **erros não previstos** ainda respondem "Erro interno do servidor" sem expor a causa. As
+mensagens de exceção também são heterogêneas (português para pauta duplicada e documento
+inválido, inglês para as demais), dificultando o tratamento uniforme no cliente.
 
 **Impacto**: Baixa — questões de ergonomia/diagnóstico da API.
 
 **Evidência**: `GlobalExceptionHandler.handleGeneric()`, mensagens de
-`DuplicatedPautaException` (PT) vs demais exceções (EN).
+`DuplicatedPautaException`/`InvalidDocumentoException` (PT) vs demais exceções (EN).
 
 ---
 
@@ -471,10 +478,12 @@ fechada" possuem cobertura (`getOpenSessaoById*`).
 | 9 | Fechamento depende do relógio local         | cluster/desvio de clock          | **Corrigido** — relógio do banco (`CURRENT_TIMESTAMP`) | Corrigida |
 | 10 | Sessão sem votos → EMPATE                   | zero participação                | **Corrigido** — status `SEM_VOTOS` quando total = 0 | Corrigida |
 | 11 | `hasSessao` não exposto                     | consulta de pautas               | **Corrigido** — código removido; consome-se via `GET /sessoes` | Corrigida |
-| 12 | CPF autodeclarado (sem verificação)         | votação                          | Sem confirmação de titularidade            | Baixa   |
+| 12 | CPF autodeclarado (sem verificação)         | votação                          | Validação externa **fictícia** (httpbin, aleatória 200/400/404/500) — sem confirmação de titularidade | Baixa   |
 | 13 | Erros 500 genéricos / mensagens mistas      | exceções não mapeadas            | Diagnóstico dificultado                    | Baixa   |
 | 14 | Testes desatualizados                       | evolução de código               | **Corrigido** — `SessaoServiceTest` alinhado    | Corrigida |
 
 **Recomendação de prioridade:** PF1, PF2, PF3, PF4, PF5, PF6, PF7, PF8, PF9, PF10, PF11 e PF14
-estão corrigidos. Próximos candidatos: PF12 (CPF autodeclarado) e PF13 (mensagens de erro
-heterogêneas).
+estão corrigidos. PF12 recebeu uma **validação externa fictícia** (aleatória, via httpbin) que
+não confirma titularidade — segue em aberto se o objetivo for autenticidade real do associado.
+`HttpIntegrationException` agora tem mapeamento próprio (503); PF13 (mensagens de erro
+heterogêneas) permanece como próximo candidato.

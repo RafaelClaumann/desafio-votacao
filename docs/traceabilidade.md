@@ -11,7 +11,7 @@ Mapa das regras de negócio para as classes e métodos que as implementam.
 | R5 — Uma sessão por pauta | `SessaoService.saveSessao()` → `sessaoRepository.existsByPautaId()` → `DuplicatedSessaoException`; `SessaoRepositoryAdapter.save()` converte a violação do índice único `uk_sessao_pauta(sessoes.pauta_id)` em `schema.sql` |
 | R6 — Duração definida pela pauta | `PautaRequestDTO` (`@Positive` + `@Max(43200)` em `tempoVotacaoMinutos`); `SessaoService.saveSessao()`: `expiresAt = sessaoRepository.now().plusMinutes(...)` (relógio do banco) |
 | R7/R8 — Votos somente em sessão aberta | `VotoService.votar()` → `SessaoService.getOpenSessaoById()` → `Sessao.isOpen(now)` (`now.isBefore(expiresAt)`) e `SessaoIsClosedException`; `now` de `SessaoRepository.now()` |
-| R9 — CPF válido | `VotoDTO` (anotação `@CPF`) |
+| R9 — CPF válido | `VotoDTO` (anotação `@CPF`) + `VotoService.votar()` (após sessão aberta) → `DocumentoValidator.isValidDocumento()` (validação externa fictícia) → `InvalidDocumentoException` (400) / `HttpIntegrationException` (503) |
 | R10 — Um voto por CPF por sessão | `VotoService.votar()` → `VotoRepository.existsBySessaoIdAndDocumento()`; `VotoRepositoryAdapter.save()` → `DuplicatedVoteException`; constraint `uk_voto_sessao_documento(sessao_id, documento)` em `schema.sql` |
 | R11 — Voto apenas SIM/NÃO | Enum `Voto.Escolha { SIM, NAO }`; `HttpMessageNotReadableException` para valores inválidos |
 | R12 — Resultado só para sessão fechada | `VotoService.apurarVotosSessao()` → `SessaoService.getClosedSessaoById()` → `Sessao.isOpen(now)` com `now` de `SessaoRepository.now()` → `SessaoIsOpenException` / `SessaoNotFoundException` |
@@ -32,8 +32,9 @@ POST /sessoes
 
 POST /votos
   VotoController.save()
-   → VotoService.votar()             [R7/R8, R10]
+   → VotoService.votar()             [R7/R8, R9, R10]
    → SessaoService.getOpenSessaoById()  [R7/R8 — Sessao.isOpen(now), now do banco]
+   → DocumentoValidatorClient.isValidDocumento()  [R9 — integração externa fictícia]
    → VotoRepositoryAdapter.save()    [R10 — salvaguarda do banco]
 
 GET /sessoes/{id}/resultado
@@ -138,3 +139,12 @@ Observações:
    `SEM_VOTOS` quando `totalVotos() == 0`, antes da comparação de maioria. `EMPATE` passa a
    significar apenas empate real com ao menos um voto registrado. Coberto por
    `ResultadoVotacaoTest`.
+10. **Validação externa de CPF (R9).** `VotoService.votar()` consulta o gateway
+    `DocumentoValidator` — implementado por `DocumentoValidatorClient`, integração **fictícia**
+    via `https://httpbin.org` (`GET /status/200,400,404,500` sorteia o status) — com o CPF já
+    normalizado, **após** a sessão ser confirmada como aberta e **antes** da duplicidade.
+    Semântica: 200 → válido; **4xx** → `InvalidDocumentoException` (400, "Documento inválido:
+    \<cpf\>"); **5xx**/indisponibilidade → `HttpIntegrationException` (**503**). Timeouts de
+    500 ms e URL configuráveis em `app.documento-validator.*`
+    (`DocumentoValidatorConfig`/`DocumentoValidatorProperties`). Como a simulação é aleatória e
+    não há base real de associados, PF12 (titularidade) segue em aberto.

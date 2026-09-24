@@ -47,14 +47,17 @@ Objetivo: registrar a manifestação de um associado em uma sessão aberta.
 3. O sistema verifica se a **sessão existe**.
 4. O sistema verifica se a **sessão está aberta** (pelo relógio do banco, a expiração ainda
    não foi alcançada).
-5. O sistema verifica se o **mesmo CPF já votou nesta sessão**.
-6. O voto é persistido (o banco reforça a unicidade por sessão/documento).
-7. O voto passa a integrar a apuração futura da sessão.
+5. O sistema consulta o **validador externo de CPF** (integração fictícia/aleatória) com o
+   documento normalizado; documento rejeitado encerra o fluxo (HTTP 400).
+6. O sistema verifica se o **mesmo CPF já votou nesta sessão**.
+7. O voto é persistido (o banco reforça a unicidade por sessão/documento).
+8. O voto passa a integrar a apuração futura da sessão.
 
 Resultado: voto registrado (HTTP 201).
 
 Rejeições possíveis: sessão inexistente (400) · sessão fechada (400) · CPF/sessão/escolha
-inválidos (400) · CPF já votou nesta sessão (409).
+inválidos (400) · CPF rejeitado pelo validador externo (400) · CPF já votou nesta sessão (409) ·
+falha no serviço externo de validação (503).
 
 ---
 

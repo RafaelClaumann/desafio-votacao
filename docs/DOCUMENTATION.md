@@ -51,7 +51,7 @@ execução pela comparação da expiração com o **relógio do banco de dados**
 | R6  | A duração da sessão é definida pela pauta (início = criação; fim = início + duração). |
 | R7  | Uma sessão aceita votos apenas enquanto estiver aberta.                 |
 | R8  | Ao atingir a expiração, a sessão fecha e nunca mais aceita votos.       |
-| R9  | Somente associados com CPF válido podem votar.                          |
+| R9  | Somente associados com CPF válido podem votar (formato `@CPF` + consulta a um validador externo fictício). |
 | R10 | Cada CPF pode votar apenas uma vez por sessão.                          |
 | R11 | O voto só pode ser SIM ou NÃO.                                          |
 | R12 | O resultado só pode ser apurado para uma sessão já fechada.             |
@@ -78,5 +78,10 @@ execução pela comparação da expiração com o **relógio do banco de dados**
   entre votos SIM e NÃO registrados. Uma sessão fechada sem nenhum voto resulta em **SEM_VOTOS**
   (0 × 0), distinto do **EMPATE** real (PF10 resolvido).
 - Não existe conceito de abstenção: todo voto registrado é obrigatoriamente SIM ou NÃO.
+- A validação do CPF no voto combina o **formato** (`@CPF`) com uma consulta a um **validador
+  externo fictício** (`DocumentoValidatorClient`, via `https://httpbin.org`), cujo resultado é
+  **aleatório** (200/400/404/500) — não confirma a titularidade do CPF (PF12). Status **4xx**
+  do serviço recusa o voto (400); **falha** (5xx ou indisponibilidade, com timeout de 500 ms)
+  gera **503**.
 - A duração de votação **é validada como valor positivo** na criação da pauta; valores `0` ou
   negativos são recusados com HTTP 400 (ver R6 em [regras-de-negocio.md](regras-de-negocio.md)).

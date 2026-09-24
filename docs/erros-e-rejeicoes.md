@@ -6,6 +6,7 @@ traduz isso para a API.
 | HTTP  | Situação de negócio                                                              | Exceção / origem                                    |
 | ----- | -------------------------------------------------------------------------------- | --------------------------------------------------- |
 | 400    | Dados de entrada inválidos (título, duração, sessão/`pauta_id`, CPF, escolha).     | `MethodArgumentNotValidException` (Bean Validation) |
+| 400    | Documento (CPF) rejeitado pelo **validador externo** (R9).                        | `InvalidDocumentoException`                        |
 | 400    | Corpo da requisição ilegível — ex.: escolha fora de SIM/NAO, JSON malformado.    | `HttpMessageNotReadableException`                 |
 | 400    | A pauta informada para abrir sessão **não existe** (R4).                          | `PautaNotFoundException`                           |
 | 400    | A sessão informada para votar/apurar **não existe** (R4/R12).                    | `SessaoNotFoundException`                          |
@@ -14,6 +15,7 @@ traduz isso para a API.
 | 409    | Tentativa de criar pauta com **título duplicado** (R2).                          | `DuplicatedPautaException`                         |
 | 409    | Tentativa de abrir a **2ª sessão da mesma pauta** (R5).                          | `DuplicatedSessaoException`                        |
 | 409    | Tentativa de votar com **CPF que já votou na sessão** (R10).                     | `DuplicatedVoteException`                          |
+| 503    | Falha no **validador externo** de CPF (status 5xx ou indisponibilidade de rede). | `HttpIntegrationException`                         |
 | 500    | Erros não previstos.                                                              | `Exception` genérica                               |
 
 ## Interpretação de negócio dos códigos
@@ -23,6 +25,8 @@ traduz isso para a API.
 - **HTTP 409 (Conflict):** a operação tenta violar uma regra de unicidade — título de pauta,
   sessão por pauta ou voto do mesmo CPF na mesma sessão. Nada é gravado.
 - **HTTP 500 (Internal Server Error):** erro inesperado do servidor.
+- **HTTP 503 (Service Unavailable):** falha na integração com o validador externo de CPF.
+  Nada é gravado.
 
 ## Cenários adicionais
 
@@ -39,6 +43,16 @@ A verificação prévia (`existsBySessaoIdAndDocumento`) evita duplicidade na ma
 Se duas requisições simultâneas passarem pela verificação ao mesmo tempo, a restrição única do
 banco captura a duplicidade e o `VotoRepositoryAdapter` a converte em `DuplicatedVoteException`
 → **HTTP 409**. O mesmo tratamento de integridade existe para o título da pauta.
+
+### Validação externa (fictícia) do CPF ao votar
+
+Após a sessão ser confirmada como aberta, `VotoService.votar()` consulta o gateway
+`DocumentoValidator` — implementado por `DocumentoValidatorClient` via `https://httpbin.org`
+(`GET /status/200,400,404,500` sorteia o status). A semântica da simulação: **200** → documento
+válido; **4xx** → documento rejeitado → `InvalidDocumentoException` → **HTTP 400**
+("Documento inválido: \<cpf\>"); **5xx** ou indisponibilidade de rede → `HttpIntegrationException`
+→ **HTTP 503**. URLs e timeouts (500 ms) vêm de `app.documento-validator.*`.
+A integração é **fictícia** (aleatória), portanto não confirma a titularidade do CPF (PF12).
 
 ### Duração da votação inválida (≤ 0 ou acima de 43200 minutos)
 

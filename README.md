@@ -29,7 +29,8 @@ Executar os testes:
 ## Convenções
 
 - **Formato dos dados:** JSON em `snake_case`.
-- **Identificação do eleitor:** CPF (obrigatório e validado — `@CPF`).
+- **Identificação do eleitor:** CPF (obrigatório; formato validado — `@CPF` — e submetido a um
+  validador externo fictício antes de votar).
 - **Escolha do voto:** somente `SIM` ou `NAO`.
 - **Tempo de votação:** em **minutos**, definido na criação da pauta.
 
@@ -249,11 +250,12 @@ curl -X POST http://localhost:8080/votos \
 - `400` — sessão inexistente.
 - `400` — sessão fechada (o voto não é aceito após a expiração).
 - `400` — CPF inválido, campos ausentes ou `escolha_voto` diferente de `SIM`/`NAO`.
+- `400` — CPF rejeitado pelo validador externo (integração fictícia, resultado aleatório).
 - `409` — o mesmo CPF **já votou** nesta sessão.
+- `503` — falha no serviço externo de validação de CPF (timeout de 500 ms).
 
-> **Atenção:** o CPF é gravado exatamente como enviado. Um mesmo CPF com formatação diferente
-> (ex.: com ou sem pontuação) é tratado como documento distinto — o que pode permitir votos
-> duplicados. Recomendado: padronizar o formato do CPF antes de enviar.
+> **Atenção:** antes de validar e gravar, o sistema **normaliza o CPF para somente dígitos**.
+> Os formatos com e sem pontuação são tratados como o **mesmo documento**.
 
 ---
 
