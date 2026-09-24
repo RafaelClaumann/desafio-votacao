@@ -24,8 +24,8 @@ public class MDCRequestFilter extends OncePerRequestFilter {
 
     public static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
     public static final String MDC_CORRELATION_ID_KEY = "correlationId";
-    private static final String MDC_REQUEST_METHOD_KEY = "requestMethod";
-    private static final String MDC_REQUEST_URI_KEY = "requestURI";
+    public static final String MDC_REQUEST_METHOD_KEY = "requestMethod";
+    public static final String MDC_REQUEST_URI_KEY = "requestURI";
 
     @Override
     protected void doFilterInternal(
