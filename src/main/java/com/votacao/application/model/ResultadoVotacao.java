@@ -7,6 +7,10 @@ public record ResultadoVotacao(long totalVotosSim, long totalVotosNao) {
     }
 
     public StatusVotacao status() {
+        if (totalVotos() == 0) {
+            return StatusVotacao.SEM_VOTOS;
+        }
+
         if (totalVotosSim > totalVotosNao) return StatusVotacao.APROVADA;
         if (totalVotosSim < totalVotosNao) return StatusVotacao.REJEITADA;
         return StatusVotacao.EMPATE;
