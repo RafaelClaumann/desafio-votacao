@@ -8,6 +8,7 @@ import com.votacao.application.model.exception.PautaNotFoundException;
 import com.votacao.application.model.exception.SessaoIsClosedException;
 import com.votacao.application.model.exception.SessaoIsOpenException;
 import com.votacao.application.model.exception.SessaoNotFoundException;
+import com.votacao.entrypoint.client.exception.HttpIntegrationException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +63,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidDocumentoException.class)
     public ResponseEntity<ApiError> handleInvalidDocumento(InvalidDocumentoException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(HttpIntegrationException.class)
+    public ResponseEntity<ApiError> handleHttpIntegration(HttpIntegrationException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(DuplicatedPautaException.class)
