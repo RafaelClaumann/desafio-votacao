@@ -105,13 +105,13 @@ Registrar a manifestação de um associado em uma sessão aberta.
 | Campo          | Tipo    | Regra                              |
 | -------------- | ------- | ---------------------------------- |
 | `id_sessao`      | inteiro | Obrigatório                        |
-| `documento`      | texto   | Obrigatório, CPF válido (com ou sem pontuação); normalizado para somente dígitos |
+| `documento`      | texto   | Obrigatório, CPF válido (com ou sem pontuação); normalizado para somente dígitos; submetido também a um validador externo (fictício) |
 | `escolha_voto`   | enum    | Obrigatório, `SIM` ou `NAO`        |
 
 **Regras de negócio**
 
-R7/R8 (sessão deve estar aberta) · R9 (CPF válido) · R10 (um voto por CPF por sessão) ·
-R11 (escolha SIM ou NÃO).
+R7/R8 (sessão deve estar aberta) · R9 (CPF válido — formato `@CPF` + validador externo) ·
+R10 (um voto por CPF por sessão) · R11 (escolha SIM ou NÃO).
 
 **Sucesso**
 
@@ -121,7 +121,9 @@ dígitos) e `escolha_voto`.
 **Erros**
 
 Sessão inexistente → 400. Sessão fechada → 400. CPF inválido / campos ausentes → 400.
-Escolha diferente de SIM/NAO → 400 (falha de desserialização). CPF já votou nesta sessão → 409.
+CPF rejeitado pelo validador externo → 400 ("Documento inválido: \<cpf\>"). Escolha diferente de
+SIM/NAO → 400 (falha de desserialização). CPF já votou nesta sessão → 409. Falha no serviço
+externo de validação → 503.
 
 ---
 

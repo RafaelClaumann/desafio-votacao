@@ -203,11 +203,31 @@ Um associado registra um voto informando seu documento.
 
 **Comportamento**
 
-O documento é validado como um CPF bem-formado antes do voto ser aceito.
+O documento é validado em duas camadas antes do voto ser aceito:
+1. **Formato** — deve ser um CPF bem-formado (validação de entrada `@CPF`).
+2. **Situação cadastral** — o documento normalizado é submetido a um **validador externo**
+   (`DocumentoValidator`). Essa integração é **fictícia**: não consulta uma base real de
+   associados e o resultado é aleatório (ver observação abaixo).
+
+A consulta externa acontece **depois** de a sessão ser confirmada como existente e aberta
+(`getOpenSessaoById`, primeira validação de negócio em `VotoService.votar()`) e **antes** da
+verificação de duplicidade.
 
 **Violação**
 
-Um documento que não seja um CPF válido recusa o voto (HTTP 400) na validação de entrada.
+Um documento que não passe na validação de formato recusa o voto (HTTP 400) na validação de
+entrada. Um documento que passe no formato, mas seja **rejeitado pelo validador externo**
+(status **4xx**), também recusa o voto (HTTP 400) com a mensagem "Documento inválido: \<cpf\>"
+— por meio da exceção `InvalidDocumentoException`. Em caso de **falha do serviço externo**
+(status **5xx** ou indisponibilidade de rede), a operação falha com `HttpIntegrationException`,
+mapeada para **HTTP 503** (Service Unavailable) no `GlobalExceptionHandler`.
+
+> Observação (validação externa fictícia): `DocumentoValidatorClient` simula o serviço externo
+> com o `https://httpbin.org` — o `GET /status/200,400,404,500` sorteia o status e o determina o
+> resultado: **200** → documento válido, **4xx** → rejeitado (400), **5xx** → falha de
+> integração (503). Não corresponde a uma base real de associados; a autodeclaração do CPF
+> (PF12) permanece (ver [pontos-fracos-e-falhas.md](pontos-fracos-e-falhas.md#pf12)). Config
+> via `app.documento-validator.*` (URL e timeouts de 500 ms).
 
 > Observação (normalização): o documento é **normalizado** para somente dígitos em
 > `VotoService.votar()` antes de ser comparado e armazenado. Os formatos com e sem pontuação
@@ -216,7 +236,13 @@ Um documento que não seja um CPF válido recusa o voto (HTTP 400) na validaçã
 
 **Implementação**
 
-`VotoDTO` — anotação `@CPF` (Bean Validation do Hibernate Validator).
+`VotoDTO` — anotação `@CPF` (Bean Validation do Hibernate Validator); `VotoService.votar()` →
+`DocumentoValidator.isValidDocumento()` (após a sessão estar aberta; lança
+`InvalidDocumentoException` quando falso); `DocumentoValidatorClient` — implementação
+`@Component` do gateway via `RestClient` (URL e timeouts de 500 ms configurados em
+`DocumentoValidatorConfig`/`DocumentoValidatorProperties`, `app.documento-validator.*`);
+`GlobalExceptionHandler` — mapeia `InvalidDocumentoException` (400) e `HttpIntegrationException`
+(503).
 
 ### R10 — Cada CPF pode votar apenas uma vez por sessão
 

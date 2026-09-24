@@ -3,10 +3,12 @@ package com.votacao.entrypoint.api.handler;
 import com.votacao.application.model.exception.DuplicatedPautaException;
 import com.votacao.application.model.exception.DuplicatedSessaoException;
 import com.votacao.application.model.exception.DuplicatedVoteException;
+import com.votacao.application.model.exception.InvalidDocumentoException;
 import com.votacao.application.model.exception.PautaNotFoundException;
 import com.votacao.application.model.exception.SessaoIsClosedException;
 import com.votacao.application.model.exception.SessaoIsOpenException;
 import com.votacao.application.model.exception.SessaoNotFoundException;
+import com.votacao.entrypoint.client.exception.HttpIntegrationException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,24 +40,9 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
     }
 
-    @ExceptionHandler(SessaoNotFoundException.class)
-    public ResponseEntity<ApiError> handleSessaoNotFound(SessaoNotFoundException ex, HttpServletRequest request) {
+    @ExceptionHandler(PautaNotFoundException.class)
+    public ResponseEntity<ApiError> handlePautaNotFound(PautaNotFoundException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
-    }
-
-    @ExceptionHandler(SessaoIsClosedException.class)
-    public ResponseEntity<ApiError> handleSessaoIsClosed(SessaoIsClosedException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
-    }
-
-    @ExceptionHandler(SessaoIsOpenException.class)
-    public ResponseEntity<ApiError> handleSessaoIsOpen(SessaoIsOpenException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
-    }
-
-    @ExceptionHandler(DuplicatedVoteException.class)
-    public ResponseEntity<ApiError> handleDuplicatedVote(DuplicatedVoteException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(DuplicatedPautaException.class)
@@ -63,14 +50,29 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 
+    @ExceptionHandler({SessaoNotFoundException.class, SessaoIsClosedException.class, SessaoIsOpenException.class})
+    public ResponseEntity<ApiError> handleSessaoBadRequest(RuntimeException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
+    }
+
     @ExceptionHandler(DuplicatedSessaoException.class)
     public ResponseEntity<ApiError> handleDuplicatedSessao(DuplicatedSessaoException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 
-    @ExceptionHandler(PautaNotFoundException.class)
-    public ResponseEntity<ApiError> handlePautaNotFound(PautaNotFoundException ex, HttpServletRequest request) {
+    @ExceptionHandler(DuplicatedVoteException.class)
+    public ResponseEntity<ApiError> handleDuplicatedVote(DuplicatedVoteException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(InvalidDocumentoException.class)
+    public ResponseEntity<ApiError> handleInvalidDocumento(InvalidDocumentoException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(HttpIntegrationException.class)
+    public ResponseEntity<ApiError> handleHttpIntegration(HttpIntegrationException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(Exception.class)
@@ -95,5 +97,4 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity.status(status).body(body);
     }
-
 }
