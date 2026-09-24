@@ -421,49 +421,69 @@ lida como regra implícita: "o CPF identifica o eleitor por autodeclaração". A
 
 ---
 
-## PF13 — Erros 500 genéricos e mensagens heterogêneas
+## PF13 — (RESOLVIDO) Erros 500 genéricos e mensagens heterogêneas
 
-**Status: parcialmente endereçado** — a parte de **diagnóstico** foi mitigada com a **correlação
-de logs por requisição via MDC manual** (`MDCRequestFilter`); a **exposição do id na resposta** e
-a **padronização das mensagens** (PT/EN misto) permanecem em aberto.
+**Status: corrigido** — mensagens padronizadas em **PT-BR**, exceções HTTP comuns mapeadas para
+4xx, mensagem estável para corpo ilegível e exposição do **`correlation_id`** no corpo de erro.
 
-**O que acontece**
+**O que acontecia antigamente**
 
-O `GlobalExceptionHandler` mapeia as exceções de negócio e a `HttpIntegrationException` (503),
-mas **erros não previstos** ainda respondem "Erro interno do servidor" sem expor a causa (comportamento
-intencional: não vazar detalhe interno). As mensagens de exceção também são heterogêneas (português
-para pauta duplicada e documento inválido, inglês para as demais), dificultando o tratamento uniforme
-no cliente.
+O `GlobalExceptionHandler` mapeava as exceções de negócio e a `HttpIntegrationException` (503),
+mas: (i) erros não previstos respondiam "Erro interno do servidor" sem expor o `correlationId` —
+o consumidor não tinha como referenciar o erro num chamado (é intencional **não** vazar a causa
+interna, mas o id deveria acompanhar o corpo); (ii) as **mensagens eram heterogêneas** (português
+para pauta duplicada/documento inválido, inglês para as demais); e (iii) exceções comuns do
+framework — rota inexistente, método não suportado, tipo inválido em `@PathVariable`, corpo
+ilegível — caíam no caso genérico ou vinham com mensagens em inglês.
 
-**O que foi agregado (diagnóstico)**
+**Comportamento atual**
 
-Todo pedido agora recebe um **`correlationId`** (do header `X-Correlation-Id` ou UUID gerado pelo
-`MDCRequestFilter`) e o coloca no MDC — o `logback-spring.xml` o renderiza em cada linha (pattern
-textual no default; campo JSON no perfil prod via `LogstashEncoder`). Assim, todas as linhas de uma
-requisição (filtro → service → handler de erro) compartilham o mesmo id, permitindo **recompor o
-rastro completo de um 500** filtrando o log.
+- **Mensagens padronizadas em PT-BR** em todas as exceções de negócio (`PautaNotFoundException`,
+  `SessaoNotFoundException`, `SessaoIsClosedException`, `SessaoIsOpenException`,
+  `DuplicatedVoteException`) e na `HttpIntegrationException` (cujo construtor agora recebe apenas
+  o `HttpStatusCode`, sem propagar `getMessage()` de baixo nível).
+- **Exceções HTTP comuns mapeadas**: rota inexistente → **404** ("Recurso não encontrado");
+  método não suportado → **405** ("Método HTTP não suportado para este recurso"); tipo inválido em
+  caminho → **400** ("Parâmetro de caminho com tipo inválido"); corpo ilegível → **400** com
+  mensagem **fixa** ("Corpo da requisição malformado ou em formato inválido"), qualquer que seja o
+  problema de parsing.
+- **`correlation_id` no corpo de erro**: o `ApiError` agora expõe o id vindo do MDC (header
+  `X-Correlation-Id` ou UUID gerado pelo `MDCRequestFilter`) no campo `correlation_id`. O
+  `MDCRequestFilter` e o `logback-spring.xml` **não mudaram** — o `GlobalExceptionHandler` apenas
+  lê `MDC.get("correlationId")` ao montar o corpo, antes do `MDC.clear()` do `finally`.
+- **Erros não previstos continuam genéricos** (HTTP 500, mensagem fixa "Erro interno do
+  servidor", sem vazar stack/detalhe interno); o detalhe completo fica no log correlacionado sob o
+  mesmo `correlation_id`.
 
-**Limitação residual**
+**Exemplo (comportamento atual)**
 
-- O `correlationId` aparece **somente em log**: o `ApiError` ainda **não** expõe o id — o consumidor
-  não consegue mencioná-lo num chamado. A correlação ajuda quem vê o log do servidor, não o cliente.
-- As **mensagens permanecem heterogêneas** (PT vs EN).
-- Erros 500 continuam com corpo genérico (intencional).
+```json
+POST /votos
+{ "id_sessao": 1, "documento": "123.456.789-09", "escolha_voto": "SIM" }
 
-**Exemplo de log correlacionado (default)**
-
+→ 503 Service Unavailable
+   {
+     "timestamp": "2026-09-24T16:49:00.000Z",
+     "status": 503,
+     "error": "Service Unavailable",
+     "message": "Falha na integração externa de validação de documento: 503",
+     "path": "/votos",
+     "correlation_id": "a3f9c2d1-…",
+     "field_errors": []
+   }
 ```
-2026-09-24 15:47:12 [http-nio-8080-exec-3] INFO  a3f9c2d1-… POST /votos com.votacao.application.service.VotoService - Registrando voto - idSessao: 1
-```
 
-**Impacto**: originalmente Baixa — mitigação parcial; sem impacto de contrato (nenhum campo novo na
-resposta de erro).
+**Impacto**: originalmente Baixa — corrigido; mensagens uniformes em PT-BR, 404/405/400 mapeados
+e `correlation_id` exposto no corpo de erro para o consumidor citar no chamado.
 
-**Evidência**: `MDCRequestFilter` (põe `correlationId`, `requestMethod`, `requestURI` no MDC; lê
-`X-Correlation-Id`; `MDC.clear()` no `finally`); `logback-spring.xml` (`%X{correlationId}` no
-default; `LogstashEncoder` no prod). O `correlationId` é **gerado manualmente** (MDC) — em
-branches futuros será migrado para o tracing do Spring Boot (Micrometer), mantendo
-`X-Correlation-Id` como header compatível.
+**Evidência**: `GlobalExceptionHandler` (handlers de `NoResourceFoundException`,
+`HttpRequestMethodNotSupportedException`, `MethodArgumentTypeMismatchException`; `handleUnreadable`
+com mensagem estável; `buildResponse` lê `MDC.get(MDC_CORRELATION_ID_KEY)`); `ApiError` (campo
+`String correlationId` → `correlation_id`); exceções de negócio com mensagens PT-BR;
+`HttpIntegrationException` (construtor `HttpStatusCode`); `DocumentoValidatorClient` (lançamentos
+sem `getMessage()`). O `correlationId` é **gerado manualmente** (MDC) — em branches futuros será
+migrado para o tracing do Spring Boot (Micrometer), mantendo `X-Correlation-Id` como header
+compatível.
 
 ---
 
@@ -505,14 +525,13 @@ fechada" possuem cobertura (`getOpenSessaoById*`).
 | 10 | Sessão sem votos → EMPATE                   | zero participação                | **Corrigido** — status `SEM_VOTOS` quando total = 0 | Corrigida |
 | 11 | `hasSessao` não exposto                     | consulta de pautas               | **Corrigido** — código removido; consome-se via `GET /sessoes` | Corrigida |
 | 12 | CPF autodeclarado (sem verificação)         | votação                          | Validação externa **fictícia** (httpbin, aleatória 200/400/404/500) — sem confirmação de titularidade | Baixa   |
-| 13 | Erros 500 genéricos / mensagens mistas      | exceções não mapeadas            | **Parcial** — logs correlacionados por `correlationId` (MDC); mensagens e exposição do id na resposta seguem em aberto | Baixa   |
+| 13 | Erros 500 genéricos / mensagens mistas      | exceções não mapeadas            | **Corrigido** — mensagens PT-BR; 404/405/400 mapeados; `correlation_id` exposto no corpo de erro | Corrigida |
 | 14 | Testes desatualizados                       | evolução de código               | **Corrigido** — `SessaoServiceTest` alinhado    | Corrigida |
 
-**Recomendação de prioridade:** PF1, PF2, PF3, PF4, PF5, PF6, PF7, PF8, PF9, PF10, PF11 e PF14
-estão corrigidos. PF12 recebeu uma **validação externa fictícia** (aleatória, via httpbin) que
-não confirma titularidade — segue em aberto se o objetivo for autenticidade real do associado.
-`HttpIntegrationException` agora tem mapeamento próprio (503). **PF13** teve a parte de
-**diagnóstico** mitigada via **`correlationId` manual no MDC** (`MDCRequestFilter`, header
-`X-Correlation-Id`, `logback-spring.xml`); permanecem em aberto a **padronização das mensagens de
-erro** (PT/EN) e a **exposição do `correlationId` no corpo de erro** (para o consumidor mencioná-lo
-em chamados).
+**Recomendação de prioridade:** PF1 a PF11, PF13 e PF14 estão corrigidos. PF12 recebeu uma
+**validação externa fictícia** (aleatória, via httpbin) que não confirma titularidade — segue em
+aberto se o objetivo for autenticidade real do associado. Com o PF13, a `HttpIntegrationException`
+tem mapeamento próprio (503), as mensagens estão padronizadas em PT-BR, rotas inexistentes (404),
+métodos não suportados (405) e parâmetros de caminho com tipo inválido (400) têm respostas
+dedicadas, e o **`correlation_id`** é exposto no corpo de erro (vindo do MDC/`MDCRequestFilter`)
+para o consumidor citá-lo em chamados.
