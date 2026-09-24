@@ -36,9 +36,10 @@ public class MDCRequestFilter extends OncePerRequestFilter {
 
         try {
             MDC.put(MDC_CORRELATION_ID_KEY, correlationId);
-            MDC.put("clientIp", request.getRemoteAddr());
+            MDC.put("requestMethod", request.getMethod());
+            MDC.put("requestURI", request.getRequestURI());
 
-            log.debug("Request received, correlationId: {}", correlationId);
+            log.debug("Request received");
 
             filterChain.doFilter(request, response);
         } finally {
