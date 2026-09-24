@@ -16,6 +16,7 @@ import com.votacao.entrypoint.api.PautaController;
 import com.votacao.entrypoint.api.SessaoController;
 import com.votacao.entrypoint.api.VotoController;
 import com.votacao.entrypoint.client.exception.HttpIntegrationException;
+import com.votacao.entrypoint.filter.MDCRequestFilter;
 import com.votacao.entrypoint.mapper.PautaMapper;
 import com.votacao.entrypoint.mapper.SessaoMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -33,6 +34,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -278,9 +280,10 @@ class GlobalExceptionHandlerTest {
         @Test
         @DisplayName("Should expose the correlation id from the MDC in the error body")
         void shouldExposeCorrelationId_whenRequestHasHeader() throws Exception {
-            mockMvc.perform(get("/nao-existe").header("X-Correlation-Id", "correlation-123"))
+            mockMvc.perform(get("/nao-existe").header(MDCRequestFilter.CORRELATION_ID_HEADER, "correlation-123"))
                     .andExpect(status().isNotFound())
-                    .andExpect(jsonPath("$.correlation_id").value("correlation-123"));
+                    .andExpect(jsonPath("$.correlation_id").value("correlation-123"))
+                    .andExpect(header().string(MDCRequestFilter.CORRELATION_ID_HEADER, "correlation-123"));
         }
 
     }
