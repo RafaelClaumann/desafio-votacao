@@ -38,12 +38,8 @@ public class SessaoService {
         }
 
         LocalDateTime now = sessaoRepository.now();
-        Sessao sessao = new Sessao(
-                null,
-                pauta,
-                now,
-                now.plusMinutes(pauta.tempoVotacaoMinutos())
-        );
+
+        Sessao sessao = Sessao.registrar(pauta, now, now.plusMinutes(pauta.tempoVotacaoMinutos()));
         return sessaoRepository.save(sessao);
     }
 
