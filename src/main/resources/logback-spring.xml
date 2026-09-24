@@ -8,6 +8,8 @@
     <springProperty scope="context" name="APPLICATION_NAME" source="spring.application.name"/>
     <property name="LOG_FOLDER_PATH" value=".logs"/>
 
+    <logger name="com.votacao.entrypoint.filter" level="DEBUG" />
+
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>${LOG_PATTERN}</pattern>
