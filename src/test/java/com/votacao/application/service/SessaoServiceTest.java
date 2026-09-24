@@ -88,7 +88,7 @@ class SessaoServiceTest {
                 () -> sessaoService.saveSessao(pautaId)
         );
 
-        assertEquals("Pauta not found with id: " + pautaId, exception.getMessage());
+        assertEquals("Pauta com id " + pautaId + " não encontrada", exception.getMessage());
         verify(sessaoRepository, never()).existsByPautaId(any());
         verify(sessaoRepository, never()).save(any(Sessao.class));
     }
@@ -153,7 +153,7 @@ class SessaoServiceTest {
                 () -> sessaoService.getOpenSessaoById(sessaoId)
         );
 
-        assertEquals("Sessão with id: " + sessaoId + " is closed", exception.getMessage());
+        assertEquals("A sessão " + sessaoId + " está fechada", exception.getMessage());
         verify(sessaoRepository).findById(sessaoId);
         verify(sessaoRepository).now();
     }
@@ -188,7 +188,7 @@ class SessaoServiceTest {
                 () -> sessaoService.getClosedSessaoById(sessaoId)
         );
 
-        assertEquals("Sessão with id: " + sessaoId + " is open", exception.getMessage());
+        assertEquals("A sessão " + sessaoId + " ainda está aberta", exception.getMessage());
         verify(sessaoRepository).findById(sessaoId);
         verify(sessaoRepository).now();
     }

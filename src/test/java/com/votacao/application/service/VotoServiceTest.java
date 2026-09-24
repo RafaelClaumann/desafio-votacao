@@ -94,7 +94,7 @@ class VotoServiceTest {
         );
 
         assertEquals(
-                "Duplicated vote for document: 12345678909 in session with id: " + ID_SESSAO,
+                "O documento 12345678909 já votou na sessão " + ID_SESSAO,
                 exception.getMessage()
         );
         verify(votoRepository, never()).save(any(Voto.class));
