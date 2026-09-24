@@ -423,21 +423,47 @@ lida como regra implícita: "o CPF identifica o eleitor por autodeclaração". A
 
 ## PF13 — Erros 500 genéricos e mensagens heterogêneas
 
-**Gatilho**
-
-Qualquer exceção não mapeada ou falha interna.
+**Status: parcialmente endereçado** — a parte de **diagnóstico** foi mitigada com a **correlação
+de logs por requisição via MDC manual** (`MDCRequestFilter`); a **exposição do id na resposta** e
+a **padronização das mensagens** (PT/EN misto) permanecem em aberto.
 
 **O que acontece**
 
 O `GlobalExceptionHandler` mapeia as exceções de negócio e a `HttpIntegrationException` (503),
-mas **erros não previstos** ainda respondem "Erro interno do servidor" sem expor a causa. As
-mensagens de exceção também são heterogêneas (português para pauta duplicada e documento
-inválido, inglês para as demais), dificultando o tratamento uniforme no cliente.
+mas **erros não previstos** ainda respondem "Erro interno do servidor" sem expor a causa (comportamento
+intencional: não vazar detalhe interno). As mensagens de exceção também são heterogêneas (português
+para pauta duplicada e documento inválido, inglês para as demais), dificultando o tratamento uniforme
+no cliente.
 
-**Impacto**: Baixa — questões de ergonomia/diagnóstico da API.
+**O que foi agregado (diagnóstico)**
 
-**Evidência**: `GlobalExceptionHandler.handleGeneric()`, mensagens de
-`DuplicatedPautaException`/`InvalidDocumentoException` (PT) vs demais exceções (EN).
+Todo pedido agora recebe um **`correlationId`** (do header `X-Correlation-Id` ou UUID gerado pelo
+`MDCRequestFilter`) e o coloca no MDC — o `logback-spring.xml` o renderiza em cada linha (pattern
+textual no default; campo JSON no perfil prod via `LogstashEncoder`). Assim, todas as linhas de uma
+requisição (filtro → service → handler de erro) compartilham o mesmo id, permitindo **recompor o
+rastro completo de um 500** filtrando o log.
+
+**Limitação residual**
+
+- O `correlationId` aparece **somente em log**: o `ApiError` ainda **não** expõe o id — o consumidor
+  não consegue mencioná-lo num chamado. A correlação ajuda quem vê o log do servidor, não o cliente.
+- As **mensagens permanecem heterogêneas** (PT vs EN).
+- Erros 500 continuam com corpo genérico (intencional).
+
+**Exemplo de log correlacionado (default)**
+
+```
+2026-09-24 15:47:12 [http-nio-8080-exec-3] INFO  a3f9c2d1-… POST /votos com.votacao.application.service.VotoService - Registrando voto - idSessao: 1
+```
+
+**Impacto**: originalmente Baixa — mitigação parcial; sem impacto de contrato (nenhum campo novo na
+resposta de erro).
+
+**Evidência**: `MDCRequestFilter` (põe `correlationId`, `requestMethod`, `requestURI` no MDC; lê
+`X-Correlation-Id`; `MDC.clear()` no `finally`); `logback-spring.xml` (`%X{correlationId}` no
+default; `LogstashEncoder` no prod). O `correlationId` é **gerado manualmente** (MDC) — em
+branches futuros será migrado para o tracing do Spring Boot (Micrometer), mantendo
+`X-Correlation-Id` como header compatível.
 
 ---
 
@@ -479,11 +505,14 @@ fechada" possuem cobertura (`getOpenSessaoById*`).
 | 10 | Sessão sem votos → EMPATE                   | zero participação                | **Corrigido** — status `SEM_VOTOS` quando total = 0 | Corrigida |
 | 11 | `hasSessao` não exposto                     | consulta de pautas               | **Corrigido** — código removido; consome-se via `GET /sessoes` | Corrigida |
 | 12 | CPF autodeclarado (sem verificação)         | votação                          | Validação externa **fictícia** (httpbin, aleatória 200/400/404/500) — sem confirmação de titularidade | Baixa   |
-| 13 | Erros 500 genéricos / mensagens mistas      | exceções não mapeadas            | Diagnóstico dificultado                    | Baixa   |
+| 13 | Erros 500 genéricos / mensagens mistas      | exceções não mapeadas            | **Parcial** — logs correlacionados por `correlationId` (MDC); mensagens e exposição do id na resposta seguem em aberto | Baixa   |
 | 14 | Testes desatualizados                       | evolução de código               | **Corrigido** — `SessaoServiceTest` alinhado    | Corrigida |
 
 **Recomendação de prioridade:** PF1, PF2, PF3, PF4, PF5, PF6, PF7, PF8, PF9, PF10, PF11 e PF14
 estão corrigidos. PF12 recebeu uma **validação externa fictícia** (aleatória, via httpbin) que
 não confirma titularidade — segue em aberto se o objetivo for autenticidade real do associado.
-`HttpIntegrationException` agora tem mapeamento próprio (503); PF13 (mensagens de erro
-heterogêneas) permanece como próximo candidato.
+`HttpIntegrationException` agora tem mapeamento próprio (503). **PF13** teve a parte de
+**diagnóstico** mitigada via **`correlationId` manual no MDC** (`MDCRequestFilter`, header
+`X-Correlation-Id`, `logback-spring.xml`); permanecem em aberto a **padronização das mensagens de
+erro** (PT/EN) e a **exposição do `correlationId` no corpo de erro** (para o consumidor mencioná-lo
+em chamados).

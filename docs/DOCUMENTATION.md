@@ -85,3 +85,6 @@ execução pela comparação da expiração com o **relógio do banco de dados**
   gera **503**.
 - A duração de votação **é validada como valor positivo** na criação da pauta; valores `0` ou
   negativos são recusados com HTTP 400 (ver R6 em [regras-de-negocio.md](regras-de-negocio.md)).
+- Para **diagnóstico**, toda requisição correlaciona suas linhas de log sob um `correlationId`
+  (header `X-Correlation-Id` ou UUID gerado pelo `MDCRequestFilter`). O corpo de erro ainda **não**
+  o expõe (PF13 em aberto).
