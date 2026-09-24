@@ -1,5 +1,6 @@
 package com.votacao.application.service;
 
+import com.votacao.application.gateway.DocumentoValidator;
 import com.votacao.application.gateway.VotoRepository;
 import com.votacao.application.model.Pauta;
 import com.votacao.application.model.Sessao;
@@ -32,16 +33,20 @@ class VotoServiceTest {
     @Mock
     private SessaoService sessaoService;
 
+    @Mock
+    private DocumentoValidator documentoValidator;
+
     @InjectMocks
     private VotoService votoService;
 
     private static final Long ID_SESSAO = 1L;
 
     @Test
-    @DisplayName("votar should normalize the documento before checking duplicity and saving")
-    void votar_shouldNormalizeDocumento_beforeCheckingDuplicityAndSaving() {
+    @DisplayName("votar should normalize the documento before checking validation, duplicity and saving")
+    void votar_shouldNormalizeDocumento_beforeCheckingValidationAndDuplicityAndSaving() {
         String documento = "123.456.789-09";
 
+        when(documentoValidator.isValidDocumento("12345678909")).thenReturn(true);
         when(sessaoService.getOpenSessaoById(ID_SESSAO)).thenReturn(openSessao());
         when(votoRepository.existsBySessaoIdAndDocumento(ID_SESSAO, "12345678909")).thenReturn(false);
         when(votoRepository.save(any(Voto.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -61,6 +66,7 @@ class VotoServiceTest {
     void votar_shouldReject_whenDocumentoAlreadyVotedInSessionIgnoringFormatting() {
         String documento = "123.456.789-09";
 
+        when(documentoValidator.isValidDocumento("12345678909")).thenReturn(true);
         when(sessaoService.getOpenSessaoById(ID_SESSAO)).thenReturn(openSessao());
         when(votoRepository.existsBySessaoIdAndDocumento(ID_SESSAO, "12345678909")).thenReturn(true);
 
@@ -77,8 +83,9 @@ class VotoServiceTest {
     }
 
     @Test
-    @DisplayName("votar should save the vote when the session is open and the documento is new")
-    void votar_shouldSaveVote_whenSessionIsOpenAndDocumentoIsNew() {
+    @DisplayName("votar should save the vote when documento is valid, the session is open and the documento is new")
+    void votar_shouldSaveVote_whenValidDocumentoSessionIsOpenAndDocumentoIsNew() {
+        when(documentoValidator.isValidDocumento("12345678909")).thenReturn(true);
         when(sessaoService.getOpenSessaoById(ID_SESSAO)).thenReturn(openSessao());
         when(votoRepository.existsBySessaoIdAndDocumento(ID_SESSAO, "12345678909")).thenReturn(false);
         when(votoRepository.save(any(Voto.class))).thenAnswer(invocation -> invocation.getArgument(0));
