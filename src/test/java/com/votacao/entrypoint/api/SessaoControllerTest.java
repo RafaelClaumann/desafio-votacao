@@ -49,13 +49,14 @@ class SessaoControllerTest {
     @Test
     @DisplayName("Should create the sessao when pauta_id is informed")
     void save_shouldCreateSessao_whenPautaIdIsInformed() throws Exception {
+        String titulo = "Reforma estatutária do capítulo quatro";
         LocalDateTime now = LocalDateTime.now();
-        Pauta pauta = new Pauta(1L, "Reforma estatutária do capítulo quatro", 10L);
+        Pauta pauta = new Pauta(1L, titulo, 10L);
         Sessao saved = new Sessao(1L, pauta, now, now.plusMinutes(10));
 
         when(sessaoService.saveSessao(1L)).thenReturn(saved);
         when(mapper.toDTO(any(SessaoComStatus.class)))
-                .thenReturn(new SessaoResponseDTO(1L, 1L, now, now.plusMinutes(10), true));
+                .thenReturn(new SessaoResponseDTO(1L, 1L, titulo, now, now.plusMinutes(10), true));
 
         mockMvc.perform(post("/sessoes")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -105,14 +106,15 @@ class SessaoControllerTest {
     @Test
     @DisplayName("Should list sessions")
     void fetch_shouldListSessions() throws Exception {
+        String titulo = "Reforma estatutária do capítulo quatro";
         LocalDateTime now = LocalDateTime.now();
-        Pauta pauta = new Pauta(1L, "Reforma estatutária do capítulo quatro", 10L);
+        Pauta pauta = new Pauta(1L, titulo, 10L);
         Sessao open = new Sessao(1L, pauta, now.minusMinutes(5), now.plusMinutes(5));
 
         when(sessaoService.getSessoesComStatus())
                 .thenReturn(List.of(new SessaoComStatus(open, true)));
         when(mapper.toDTOList(anyList()))
-                .thenReturn(List.of(new SessaoResponseDTO(1L, 1L, now.minusMinutes(5), now.plusMinutes(5), true)));
+                .thenReturn(List.of(new SessaoResponseDTO(1L, 1L, titulo, now.minusMinutes(5), now.plusMinutes(5), true)));
 
         mockMvc.perform(get("/sessoes"))
                 .andExpect(status().isOk())
