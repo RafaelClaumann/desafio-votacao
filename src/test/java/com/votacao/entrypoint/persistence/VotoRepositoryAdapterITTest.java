@@ -43,7 +43,7 @@ class VotoRepositoryAdapterITTest {
         String documento = "12345678909";
 
         Voto firstVote = adapter.save(Voto.registrar(firstSession, documento, Voto.Escolha.SIM));
-        Voto secondVote = adapter.save(Voto.registrar(firstSession, documento, Voto.Escolha.NAO));
+        Voto secondVote = adapter.save(Voto.registrar(secondSession, documento, Voto.Escolha.NAO));
 
         assertNotNull(firstVote.id());
         assertNotNull(secondVote.id());
