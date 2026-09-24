@@ -68,9 +68,10 @@ Objetivo: divulgar o resultado de uma sessão já encerrada.
    alcançada).
 4. O sistema conta os votos **SIM** e os votos **NÃO** registrados na sessão.
 5. O sistema calcula o **total de votos** e o **status**:
+   - nenhum voto → **SEM_VOTOS**
    - SIM > NÃO → **APROVADA**
    - SIM < NÃO → **REJEITADA**
-   - SIM = NÃO → **EMPATE**
+   - SIM = NÃO (com ao menos um voto) → **EMPATE**
 6. O resultado é retornado ao organizador.
 
 Resultado: resposta com totais e status (HTTP 200).

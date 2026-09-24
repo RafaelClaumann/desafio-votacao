@@ -333,39 +333,66 @@ não muda.
 
 ---
 
-## PF10 — Sessão fechada sem nenhum voto resulta em EMPATE silencioso
+## PF10 — (RESOLVIDO) Sessão fechada sem nenhum voto resulta em EMPATE silencioso
 
-**Gatilho**
+**Status: corrigido** — `ResultadoVotacao.status()` agora retorna **`SEM_VOTOS`** quando o total
+de votos é zero, antes da comparação de maioria. `EMPATE` passou a significar apenas **empate
+real** (ao menos um voto registrado e SIM == NÃO).
 
-Uma sessão chega ao fim sem nenhum voto registrado (ex.: ninguém participou).
+**Comportamento anterior**
 
-**O que acontece**
+O resultado reportava `votos_sim = 0`, `votos_nao = 0`, `total = 0` e status **EMPATE** — a
+mesma classificação de uma disputa empatada de verdade. Não havia distinção entre "empate
+real" e "votação sem nenhuma participação" (nem quórum mínimo).
 
-O resultado reporta `votos_sim = 0`, `votos_nao = 0`, `total = 0` e status **EMPATE** — a mesma
-classificação de uma disputa empatada de verdade. Não há distinção entre "empate real" e
-"votação sem nenhuma participação" (nem quórum mínimo).
+**Comportamento atual**
 
-**Impacto**: Baixa — ambiguidade de negócio; o resultado pode ser lido como "empate válido".
+Uma sessão fechada sem nenhum voto retorna status **`SEM_VOTOS`** (`SIM = 0`, `NÃO = 0`),
+distinto do empate. A resposta mantém o mesmo formato (`votos_sim`, `votos_nao`, `total`,
+`status`); somente o valor de `status` muda — sem breaking de contrato de campos.
 
-**Evidência**: `ResultadoVotacao.status()` (SIM == NÃO → EMPATE, incl. 0 × 0).
+**Exemplo (comportamento atual)**
+
+```json
+GET /sessoes/1/resultado
+→ 200 OK
+   {
+     "id_sessao": 1,
+     "votos_sim": 0,
+     "votos_nao": 0,
+     "total": 0,
+     "status": "SEM_VOTOS"
+   }
+```
+
+**Impacto**: originalmente Baixa — corrigido; zero participação deixou de ser indistinguível
+do empate.
+
+**Evidência**: `StatusVotacao.SEM_VOTOS`; `ResultadoVotacao.status()` (retorna `SEM_VOTOS`
+quando `totalVotos() == 0`); teste `ResultadoVotacaoTest` (casos 0×0 → SEM_VOTOS, 0×0 → EMPATE
+ausente, maioria e empate real).
 
 ---
 
-## PF11 — Indicador "pauta já possui sessão" calculado mas não exposto
+## PF11 — (RESOLVIDO) Indicador "pauta já possui sessão" calculado mas não exposto
 
-**Gatilho**
+**Status: corrigido** — o código morto foi **removido**: `PautaService.pautaComStatuses()`,
+o record `PautaComStatus` e a consulta `SessaoRepository.findPautaIdsComSessao()` não existem
+mais.
 
-Consumidor da API quer saber se uma pauta já tem sessão sem consultar a lista de sessões.
+**Comportamento anterior**
 
-**O que acontece**
-
-`PautaService.pautaComStatuses()` calcula `hasSessao` para cada pauta, mas **nenhum controller
-o utiliza** — `GET /pautas` retorna apenas id/título/duração. A informação precisa ser
+`PautaService.pautaComStatuses()` calculava `hasSessao` para cada pauta, mas **nenhum controller
+o utilizava** — `GET /pautas` retornava apenas id/título/duração. A informação precisava ser
 inferida cruzando `GET /pautas` com `GET /sessoes`.
 
-**Impacto**: Baixa — limitação de consumo da API.
+**Comportamento atual**
 
-**Evidência**: `PautaService.pautaComStatuses()` (sem chamadas), `PautaController.fetch()`.
+O indicador deixou de existir (era código sem chamadas, remanescente de uma feature nunca
+conectada à API). `GET /pautas` permanece retornando id/título/duração; quem precisar saber se
+a pauta já possui sessão cruza com `GET /sessoes`.
+
+**Impacto**: originalmente Baixa — corrigido; sem código morto residual.
 
 ---
 
@@ -442,12 +469,12 @@ fechada" possuem cobertura (`getOpenSessaoById*`).
 | 7 | Unicidade de CPF divergente (entidade/schema) | leitura/geração de DDL          | **Corrigido** — entidade declara `uk_voto_sessao_documento` | Corrigida |
 | 8 | CPF sem normalização                        | mesma pessoa, formatos diferentes | **Corrigido** — `VotoService` normaliza antes do check | Corrigida |
 | 9 | Fechamento depende do relógio local         | cluster/desvio de clock          | **Corrigido** — relógio do banco (`CURRENT_TIMESTAMP`) | Corrigida |
-| 10 | Sessão sem votos → EMPATE                   | zero participação                | Empate silencioso                          | Baixa   |
-| 11 | `hasSessao` não exposto                     | consulta de pautas               | Necessário cruzamento com `/sessoes`       | Baixa   |
+| 10 | Sessão sem votos → EMPATE                   | zero participação                | **Corrigido** — status `SEM_VOTOS` quando total = 0 | Corrigida |
+| 11 | `hasSessao` não exposto                     | consulta de pautas               | **Corrigido** — código removido; consome-se via `GET /sessoes` | Corrigida |
 | 12 | CPF autodeclarado (sem verificação)         | votação                          | Sem confirmação de titularidade            | Baixa   |
 | 13 | Erros 500 genéricos / mensagens mistas      | exceções não mapeadas            | Diagnóstico dificultado                    | Baixa   |
 | 14 | Testes desatualizados                       | evolução de código               | **Corrigido** — `SessaoServiceTest` alinhado    | Corrigida |
 
-**Recomendação de prioridade:** PF1, PF2, PF3, PF4, PF5, PF6, PF7, PF8, PF9 e PF14 estão
-corrigidos. Próximos candidatos: PF10 (EMPATE silencioso sem votos) e PF12 (CPF autodeclarado),
-além de PF13 (mensagens de erro heterogêneas).
+**Recomendação de prioridade:** PF1, PF2, PF3, PF4, PF5, PF6, PF7, PF8, PF9, PF10, PF11 e PF14
+estão corrigidos. Próximos candidatos: PF12 (CPF autodeclarado) e PF13 (mensagens de erro
+heterogêneas).

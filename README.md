@@ -284,14 +284,15 @@ curl http://localhost:8080/sessoes/1/resultado
 | `votos_sim` | numero   | Total de votos SIM                           |
 | `votos_nao` | numero   | Total de votos NAO                           |
 | `total`     | numero   | Votos SIM + NAO                              |
-| `status`    | string   | `APROVADA` (SIM > NAO) · `REJEITADA` (SIM < NAO) · `EMPATE` (empate) |
+| `status`    | string   | `SEM_VOTOS` (nenhum voto) · `APROVADA` (SIM > NAO) · `REJEITADA` (SIM < NAO) · `EMPATE` (empate com votos) |
 
 **Erros:**
 
 - `400` — sessão inexistente.
 - `400` — sessão ainda **aberta** (espere a expiração).
 
-> **Atenção:** uma sessão fechada sem nenhum voto retorna `EMPATE` (0 × 0).
+> **Atenção:** uma sessão fechada sem nenhum voto retorna `SEM_VOTOS` (0 × 0), distinto
+> do `EMPATE` real.
 
 ---
 
@@ -329,7 +330,7 @@ Toda resposta de erro segue o formato:
 | 7 | **Um CPF vota uma única vez por sessão.** |
 | 8 | Voto somente `SIM` ou `NAO`. |
 | 9 | Resultado apurado **apenas para sessões fechadas**. |
-| 10 | Status: `APROVADA` / `REJEITADA` / `EMPATE` conforme a maioria simples. |
+| 10 | Status: `SEM_VOTOS` / `APROVADA` / `REJEITADA` / `EMPATE` conforme a participação e a maioria simples. |
 
 Detalhes completos: [`docs/regras-de-negocio.md`](docs/regras-de-negocio.md).
 

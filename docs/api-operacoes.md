@@ -142,7 +142,7 @@ R12 (sessão deve existir e estar fechada) · R13 (status por maioria simples).
 **Sucesso**
 
 HTTP 200 — `id_sessao`, `votos_sim`, `votos_nao`, `total` e `status`
-(`APROVADA`, `REJEITADA` ou `EMPATE`).
+(`SEM_VOTOS`, `APROVADA`, `REJEITADA` ou `EMPATE`).
 
 **Erros**
 
