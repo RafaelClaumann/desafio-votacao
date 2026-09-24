@@ -447,10 +447,12 @@ ilegível — caíam no caso genérico ou vinham com mensagens em inglês.
   caminho → **400** ("Parâmetro de caminho com tipo inválido"); corpo ilegível → **400** com
   mensagem **fixa** ("Corpo da requisição malformado ou em formato inválido"), qualquer que seja o
   problema de parsing.
-- **`correlation_id` no corpo de erro**: o `ApiError` agora expõe o id vindo do MDC (header
-  `X-Correlation-Id` ou UUID gerado pelo `MDCRequestFilter`) no campo `correlation_id`. O
-  `MDCRequestFilter` e o `logback-spring.xml` **não mudaram** — o `GlobalExceptionHandler` apenas
-  lê `MDC.get("correlationId")` ao montar o corpo, antes do `MDC.clear()` do `finally`.
+- **`correlation_id` no corpo de erro e header de resposta**: o `ApiError` expõe o id vindo do MDC
+  (header `X-Correlation-Id` ou UUID gerado pelo `MDCRequestFilter`) no campo `correlation_id`, e o
+  filtro **ecoa o `X-Correlation-Id` na resposta** — o consumidor correlaciona qualquer resposta
+  sem ler log. O `GlobalExceptionHandler` apenas lê `MDC.get("correlationId")` ao montar o corpo;
+  no `finally`, o `MDCRequestFilter` **remove as chaves que ele mesmo colocou** (`MDC.remove(...)`)
+  — não mais `MDC.clear()` — para não varrer o MDC da thread. O `logback-spring.xml` **não mudou**.
 - **Erros não previstos continuam genéricos** (HTTP 500, mensagem fixa "Erro interno do
   servidor", sem vazar stack/detalhe interno); o detalhe completo fica no log correlacionado sob o
   mesmo `correlation_id`.
@@ -473,17 +475,19 @@ POST /votos
    }
 ```
 
-**Impacto**: originalmente Baixa — corrigido; mensagens uniformes em PT-BR, 404/405/400 mapeados
-e `correlation_id` exposto no corpo de erro para o consumidor citar no chamado.
+**Impacto**: originalmente Baixa — corrigido; mensagens uniformes em PT-BR, 404/405/400 mapeados,
+`correlation_id` exposto no corpo de erro e `X-Correlation-Id` ecoado na resposta.
 
 **Evidência**: `GlobalExceptionHandler` (handlers de `NoResourceFoundException`,
 `HttpRequestMethodNotSupportedException`, `MethodArgumentTypeMismatchException`; `handleUnreadable`
 com mensagem estável; `buildResponse` lê `MDC.get(MDC_CORRELATION_ID_KEY)`); `ApiError` (campo
-`String correlationId` → `correlation_id`); exceções de negócio com mensagens PT-BR;
+`String correlationId` → `correlation_id`); `MDCRequestFilter` (`@Order(HIGHEST_PRECEDENCE)`,
+constantes `CORRELATION_ID_HEADER`/`MDC_CORRELATION_ID_KEY`, ecoa o header, `MDC.remove(...)` no
+`finally`, `shouldNotFilterAsyncDispatch()`); exceções de negócio com mensagens PT-BR;
 `HttpIntegrationException` (construtor `HttpStatusCode`); `DocumentoValidatorClient` (lançamentos
-sem `getMessage()`). O `correlationId` é **gerado manualmente** (MDC) — em branches futuros será
-migrado para o tracing do Spring Boot (Micrometer), mantendo `X-Correlation-Id` como header
-compatível.
+sem `getMessage()`); testes `MDCRequestFilterTest` e `GlobalExceptionHandlerTest`. O `correlationId`
+é **gerado manualmente** (MDC) — em branches futuros será migrado para o tracing do Spring Boot
+(Micrometer), mantendo `X-Correlation-Id` como header compatível.
 
 ---
 

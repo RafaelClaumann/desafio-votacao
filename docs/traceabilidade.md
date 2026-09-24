@@ -154,12 +154,13 @@ Observações:
     (`DocumentoValidatorConfig`/`DocumentoValidatorProperties`). Como a simulação é aleatória e
     não há base real de associados, PF12 (titularidade) segue em aberto.
 11. **Correlação de logs e do corpo de erro por requisição (PF13 resolvido).**
-    `MDCRequestFilter` (`com.votacao.entrypoint.filter`) lê o header `X-Correlation-Id` (ou gera
-    UUID) e popula o MDC com `correlationId`, `requestMethod` e `requestURI`; `MDC.clear()` no
-    `finally` evita vazamento entre requisições na thread pool. O `logback-spring.xml` renderiza as
-    chaves (pattern textual no default; campos JSON via `LogstashEncoder` no prod), de modo que
-    todas as linhas de uma requisição — incluindo o `ERROR` do
-    `GlobalExceptionHandler.handleGeneric()` — compartilham o mesmo id. O `GlobalExceptionHandler`
-    lê `MDC.get("correlationId")` ao montar o `ApiError`, expondo o campo **`correlation_id`** no
-    corpo de erro; o filtro e o logback **não mudaram**. O `correlationId` é **gerado manualmente**
+    `MDCRequestFilter` (`com.votacao.entrypoint.filter`, `@Order(Ordered.HIGHEST_PRECEDENCE)`) lê o
+    header `X-Correlation-Id` (ou gera UUID), **ecoa a header `X-Correlation-Id` na resposta** e
+    popula o MDC com `correlationId`, `requestMethod` e `requestURI`; no `finally` **remove as
+    chaves que ele mesmo colocou** (`MDC.remove(...)`) — não `MDC.clear()` — evitando vazar entre
+    requisições na thread pool. O `logback-spring.xml` renderiza as chaves (pattern textual no
+    default; campos JSON via `LogstashEncoder` no prod), de modo que todas as linhas de uma
+    requisição — incluindo o `ERROR` do `GlobalExceptionHandler.handleGeneric()` — compartilham o
+    mesmo id. O `GlobalExceptionHandler` lê `MDC.get("correlationId")` ao montar o `ApiError`,
+    expondo o campo **`correlation_id`** no corpo de erro. O `correlationId` é **gerado manualmente**
     (MDC); em branches futuros será migrado para o tracing do Spring Boot (Micrometer).
