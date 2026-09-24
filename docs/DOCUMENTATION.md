@@ -68,6 +68,7 @@ execução pela comparação da expiração com o **relógio do banco de dados**
 | [api-operacoes.md](api-operacoes.md)             | Operações da API REST e como acionam as regras de negócio.      |
 | [erros-e-rejeicoes.md](erros-e-rejeicoes.md)     | Motivos de rejeição e mapeamento de erros HTTP.                 |
 | [traceabilidade.md](traceabilidade.md)           | Mapa regra → implementação, índices do banco e observações do código. |
+| [decisao-relogio-da-sessao.md](decisao-relogio-da-sessao.md) | Decisão técnica: por que a "hora atual" da sessão vem do relógio do banco (contexto, alternativas e trade-offs). |
 
 ## Observações Importantes
 

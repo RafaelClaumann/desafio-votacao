@@ -125,9 +125,10 @@ Observações:
    `SessaoRepository.now()` (`SELECT CURRENT_TIMESTAMP`, única autoridade de hora, comum a todas
    as instâncias). A regra não mora mais em queries SQL (`isOpenById`/`findOpenIds` foram
    removidas): `getOpenSessaoById`/`getClosedSessaoById` e a lista `getSessoesComStatus`
-   (`findAll()` + um único `now()`, transportando `SessaoComStatus`) aplicam a mesma regra.
-   Não há nenhum `LocalDateTime.now()` da JVM no fluxo; não há status persistido nem job de
-   fechamento — o estado continua derivado somente de `expires_at`.
+(`findAll()` + um único `now()`, transportando `SessaoComStatus`) aplicam a mesma regra.
+    Não há nenhum `LocalDateTime.now()` da JVM no fluxo; não há status persistido nem job de
+    fechamento — o estado continua derivado somente de `expires_at`. Os motivos da escolha e os
+    trade-offs estão em [decisao-relogio-da-sessao.md](decisao-relogio-da-sessao.md).
 8. **Janela de corrida no limite da expiração.** Entre a leitura do `now` do banco e a gravação
    do voto existe uma janela de poucos milissegundos em que um voto pode ser gravado logo após a
    expiração ter sido "vista" como aberta. É residual e pré-existente; a constraint
