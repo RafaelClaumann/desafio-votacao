@@ -31,11 +31,13 @@ public class VotoService {
     @Transactional
     public Voto votar(Long idSessao, String documento, Voto.Escolha escolhaVoto) {
         String documentoNormalizado = normalizarDocumento(documento);
+
+        Sessao sessao = sessaoService.getOpenSessaoById(idSessao);
+
         if (!documentoValidator.isValidDocumento(documentoNormalizado)) {
             throw new InvalidDocumentoException(documento);
         }
 
-        Sessao sessao = sessaoService.getOpenSessaoById(idSessao);
         if (votoRepository.existsBySessaoIdAndDocumento(idSessao, documentoNormalizado)) {
             throw new DuplicatedVoteException(idSessao, documentoNormalizado);
         }
