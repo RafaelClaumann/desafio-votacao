@@ -55,7 +55,7 @@ class SessaoServiceTest {
         LocalDateTime now = LocalDateTime.of(2026, 9, 23, 10, 0);
 
         when(pautaService.getPautaById(idPauta)).thenReturn(pauta);
-        when(sessaoRepository.existsByPautaId(idPauta)).thenReturn(false);
+        when(sessaoRepository.existsByIdPauta(idPauta)).thenReturn(false);
         when(sessaoRepository.now()).thenReturn(now);
         when(sessaoRepository.save(any(Sessao.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -89,7 +89,7 @@ class SessaoServiceTest {
         );
 
         assertEquals("Pauta com id " + idPauta + " não encontrada", exception.getMessage());
-        verify(sessaoRepository, never()).existsByPautaId(any());
+        verify(sessaoRepository, never()).existsByIdPauta(any());
         verify(sessaoRepository, never()).save(any(Sessao.class));
     }
 
@@ -100,7 +100,7 @@ class SessaoServiceTest {
         Pauta pauta = new Pauta(idPauta, "Reforma estatutária do capítulo quatro", 10L);
 
         when(pautaService.getPautaById(idPauta)).thenReturn(pauta);
-        when(sessaoRepository.existsByPautaId(idPauta)).thenReturn(true);
+        when(sessaoRepository.existsByIdPauta(idPauta)).thenReturn(true);
 
         DuplicatedSessaoException exception = assertThrows(
                 DuplicatedSessaoException.class,

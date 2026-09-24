@@ -48,7 +48,7 @@ class SessaoControllerTest {
 
     @Test
     @DisplayName("Should create the sessao when id_pauta is informed")
-    void save_shouldCreateSessao_whenPautaIdIsInformed() throws Exception {
+    void save_shouldCreateSessao_whenIdPautaIsInformed() throws Exception {
         String titulo = "Reforma estatutária do capítulo quatro";
         LocalDateTime now = LocalDateTime.now();
         Pauta pauta = new Pauta(1L, titulo, 10L);
@@ -91,7 +91,7 @@ class SessaoControllerTest {
 
     @Test
     @DisplayName("Should reject with 400 when id_pauta is missing")
-    void save_shouldReject_whenPautaIdIsMissing() throws Exception {
+    void save_shouldReject_whenIdPautaIsMissing() throws Exception {
         mockMvc.perform(post("/sessoes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))

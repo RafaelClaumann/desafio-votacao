@@ -47,8 +47,8 @@ class VotoRepositoryAdapterITTest {
 
         assertNotNull(firstVote.id());
         assertNotNull(secondVote.id());
-        assertEquals(1, adapter.countBySessaoIdAndEscolha(firstSession.id(), Voto.Escolha.SIM));
-        assertEquals(1, adapter.countBySessaoIdAndEscolha(secondSession.id(), Voto.Escolha.NAO));
+        assertEquals(1, adapter.countByIdSessaoAndEscolha(firstSession.id(), Voto.Escolha.SIM));
+        assertEquals(1, adapter.countByIdSessaoAndEscolha(secondSession.id(), Voto.Escolha.NAO));
     }
 
     @Test

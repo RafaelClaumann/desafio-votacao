@@ -49,13 +49,13 @@ class VotoServiceTest {
 
         when(sessaoService.getOpenSessaoById(ID_SESSAO)).thenReturn(openSessao());
         when(documentoValidator.isValidDocumento("12345678909")).thenReturn(true);
-        when(votoRepository.existsBySessaoIdAndDocumento(ID_SESSAO, "12345678909")).thenReturn(false);
+        when(votoRepository.existsByIdSessaoAndDocumento(ID_SESSAO, "12345678909")).thenReturn(false);
         when(votoRepository.save(any(Voto.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Voto result = votoService.votar(ID_SESSAO, documento, Voto.Escolha.SIM);
 
         assertEquals("12345678909", result.documento());
-        verify(votoRepository).existsBySessaoIdAndDocumento(ID_SESSAO, "12345678909");
+        verify(votoRepository).existsByIdSessaoAndDocumento(ID_SESSAO, "12345678909");
 
         ArgumentCaptor<Voto> captor = ArgumentCaptor.forClass(Voto.class);
         verify(votoRepository).save(captor.capture());
@@ -67,7 +67,7 @@ class VotoServiceTest {
     void votar_shouldSaveVote_whenValidDocumentoSessionIsOpenAndDocumentoIsNew() {
         when(sessaoService.getOpenSessaoById(ID_SESSAO)).thenReturn(openSessao());
         when(documentoValidator.isValidDocumento("12345678909")).thenReturn(true);
-        when(votoRepository.existsBySessaoIdAndDocumento(ID_SESSAO, "12345678909")).thenReturn(false);
+        when(votoRepository.existsByIdSessaoAndDocumento(ID_SESSAO, "12345678909")).thenReturn(false);
         when(votoRepository.save(any(Voto.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Voto result = votoService.votar(ID_SESSAO, "12345678909", Voto.Escolha.NAO);
@@ -75,7 +75,7 @@ class VotoServiceTest {
         assertEquals("12345678909", result.documento());
         assertEquals(Voto.Escolha.NAO, result.escolhaVoto());
         assertEquals(ID_SESSAO, result.sessao().id());
-        verify(votoRepository).existsBySessaoIdAndDocumento(ID_SESSAO, "12345678909");
+        verify(votoRepository).existsByIdSessaoAndDocumento(ID_SESSAO, "12345678909");
         verify(votoRepository).save(any(Voto.class));
     }
 
@@ -86,7 +86,7 @@ class VotoServiceTest {
 
         when(sessaoService.getOpenSessaoById(ID_SESSAO)).thenReturn(openSessao());
         when(documentoValidator.isValidDocumento("12345678909")).thenReturn(true);
-        when(votoRepository.existsBySessaoIdAndDocumento(ID_SESSAO, "12345678909")).thenReturn(true);
+        when(votoRepository.existsByIdSessaoAndDocumento(ID_SESSAO, "12345678909")).thenReturn(true);
 
         DuplicatedVoteException exception = assertThrows(
                 DuplicatedVoteException.class,
