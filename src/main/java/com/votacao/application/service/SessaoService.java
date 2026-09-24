@@ -33,7 +33,7 @@ public class SessaoService {
     public Sessao saveSessao(Long idPauta) {
         Pauta pauta = pautaService.getPautaById(idPauta);
 
-        if (sessaoRepository.existsByPautaId(idPauta)) {
+        if (sessaoRepository.existsByIdPauta(idPauta)) {
             throw new DuplicatedSessaoException(idPauta);
         }
 

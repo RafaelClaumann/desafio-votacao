@@ -36,7 +36,7 @@ public class SessaoRepositoryAdapter implements SessaoRepository {
     }
 
     @Override
-    public boolean existsByPautaId(Long idPauta) {
+    public boolean existsByIdPauta(Long idPauta) {
         return repository.existsByPautaId(idPauta);
     }
 

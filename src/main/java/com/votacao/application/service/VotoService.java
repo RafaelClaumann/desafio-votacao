@@ -43,7 +43,7 @@ public class VotoService {
             throw new InvalidDocumentoException(documento);
         }
 
-        if (votoRepository.existsBySessaoIdAndDocumento(idSessao, documentoNormalizado)) {
+        if (votoRepository.existsByIdSessaoAndDocumento(idSessao, documentoNormalizado)) {
             throw new DuplicatedVoteException(idSessao, documentoNormalizado);
         }
 
@@ -57,8 +57,8 @@ public class VotoService {
         return new ApuracaoSessao(
                 idSessao,
                 new ResultadoVotacao(
-                        votoRepository.countBySessaoIdAndEscolha(idSessao, Voto.Escolha.SIM),
-                        votoRepository.countBySessaoIdAndEscolha(idSessao, Voto.Escolha.NAO)
+                        votoRepository.countByIdSessaoAndEscolha(idSessao, Voto.Escolha.SIM),
+                        votoRepository.countByIdSessaoAndEscolha(idSessao, Voto.Escolha.NAO)
                 )
         );
     }
