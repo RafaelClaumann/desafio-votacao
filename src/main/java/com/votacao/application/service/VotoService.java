@@ -48,7 +48,7 @@ public class VotoService {
         }
 
         log.info("Registrando voto - idSessao: {}", idSessao);
-        Voto voto = new Voto(null, sessao, documentoNormalizado, escolhaVoto);
+        Voto voto = Voto.registrar(sessao, documentoNormalizado, escolhaVoto);
         return votoRepository.save(voto);
     }
 

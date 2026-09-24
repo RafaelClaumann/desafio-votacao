@@ -42,8 +42,8 @@ class VotoRepositoryAdapterITTest {
         Sessao secondSession = persistSession("[PF7] Pauta dois");
         String documento = "12345678909";
 
-        Voto firstVote = adapter.save(new Voto(null, firstSession, documento, Voto.Escolha.SIM));
-        Voto secondVote = adapter.save(new Voto(null, secondSession, documento, Voto.Escolha.NAO));
+        Voto firstVote = adapter.save(Voto.registrar(firstSession, documento, Voto.Escolha.SIM));
+        Voto secondVote = adapter.save(Voto.registrar(firstSession, documento, Voto.Escolha.NAO));
 
         assertNotNull(firstVote.id());
         assertNotNull(secondVote.id());
@@ -57,11 +57,11 @@ class VotoRepositoryAdapterITTest {
         Sessao session = persistSession("[PF7] Pauta tres");
         String documento = "12345678909";
 
-        adapter.save(new Voto(null, session, documento, Voto.Escolha.SIM));
+        adapter.save(Voto.registrar(session, documento, Voto.Escolha.SIM));
 
         DuplicatedVoteException exception = assertThrows(
                 DuplicatedVoteException.class,
-                () -> adapter.save(new Voto(null, session, documento, Voto.Escolha.NAO))
+                () -> adapter.save(Voto.registrar(session, documento, Voto.Escolha.NAO))
         );
 
         assertEquals(
