@@ -3,7 +3,7 @@ package com.votacao.entrypoint.api.dto;
 import com.votacao.application.model.StatusVotacao;
 
 public record ResultadoVotacaoResponse(
-        Long idSessao,
+        long idSessao,
         long votosSim,
         long votosNao,
         long total,
