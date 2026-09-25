@@ -292,8 +292,9 @@ mesma sessão**, burlando a regra R10 pela formatação.
 
 **Impacto**: **Alta** — regra de negócio contornável por um valor trivial e legal de CPF.
 
-**Evidência**: `VotoService.votar()` (`normalizarDocumento` antes de `existsByIdSessaoAndDocumento`
-e da persistência); `VotoServiceTest` com cenários de normalização do documento e de recusa com
+**Evidência**: `VotoService.votar()` (`formatter.unformat(documento)` do Caelum Stella, antes de
+`existsByIdSessaoAndDocumento` e da persistência); `ThirdPartyConfiguration` provê o bean
+`Formatter`; `VotoServiceTest` com cenários de normalização do documento e de recusa com
 formatação distinta.
 
 ---

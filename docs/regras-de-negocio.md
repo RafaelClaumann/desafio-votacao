@@ -230,8 +230,9 @@ mapeada para **HTTP 503** (Service Unavailable) no `GlobalExceptionHandler`.
 > via `app.documento-validator.*` (URL e timeouts de 500 ms).
 
 > Observação (normalização): o documento é **normalizado** para somente dígitos em
-> `VotoService.votar()` antes de ser comparado e armazenado. Os formatos com e sem pontuação
-> são tratados como o **mesmo documento** (reforça a unicidade de R10; ver
+> `VotoService.votar()` — via `formatter.unformat` do Caelum Stella (bean `Formatter` de
+> `ThirdPartyConfiguration`) — antes de ser comparado e armazenado. Os formatos com e sem
+> pontuação são tratados como o **mesmo documento** (reforça a unicidade de R10; ver
 > [traceabilidade.md](traceabilidade.md#observações)).
 
 **Implementação**
@@ -262,7 +263,7 @@ salvaguarda contra votos simultâneos abusando da verificação em memória.
 
 **Implementação**
 
-`VotoService.votar()` (normaliza o CPF para somente dígitos e consulta
+`VotoService.votar()` (normaliza o CPF para somente dígitos via `formatter.unformat` e consulta
 `votoRepository.existsByIdSessaoAndDocumento()` com a forma canônica); e
 `VotoRepositoryAdapter.save()` traduz violação de integridade em `DuplicatedVoteException`.
 

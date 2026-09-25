@@ -262,8 +262,9 @@ curl -X POST http://localhost:8080/votos \
 - `409` — o mesmo CPF **já votou** nesta sessão.
 - `503` — falha no serviço externo de validação de CPF (timeout de 500 ms).
 
-> **Atenção:** antes de validar e gravar, o sistema **normaliza o CPF para somente dígitos**.
-> Os formatos com e sem pontuação são tratados como o **mesmo documento**.
+> **Atenção:** antes de validar e gravar, o sistema **normaliza o CPF para somente dígitos**
+> (via `CPFFormatter` do Caelum Stella). Os formatos com e sem pontuação são tratados como o
+> **mesmo documento**.
 
 ---
 

@@ -11,7 +11,7 @@ Mapa das regras de negócio para as classes e métodos que as implementam.
 | R5 — Uma sessão por pauta | `SessaoService.saveSessao()` → `sessaoRepository.existsByIdPauta()` → `DuplicatedSessaoException`; `SessaoRepositoryAdapter.save()` converte a violação do índice único `uk_sessao_pauta(sessoes.id_pauta)` em `schema.sql` |
 | R6 — Duração definida pela pauta | `PautaRequestDTO` (`@Positive` + `@Max(43200)` em `tempoVotacaoMinutos`); `SessaoService.saveSessao()`: `expiresAt = sessaoRepository.now().plusMinutes(...)` (relógio do banco) |
 | R7/R8 — Votos somente em sessão aberta | `VotoService.votar()` → `SessaoService.getOpenSessaoById()` → `Sessao.isOpen(now)` (`now.isBefore(expiresAt)`) e `SessaoIsClosedException`; `now` de `SessaoRepository.now()` |
-| R9 — CPF válido | `VotoDTO` (anotação `@CPF`) + `VotoService.votar()` (após sessão aberta) → `DocumentoValidator.isValidDocumento()` (validação externa fictícia) → `InvalidDocumentoException` (400) / `HttpIntegrationException` (503) |
+| R9 — CPF válido | `VotoDTO` (anotação `@CPF`) + `VotoService.votar()` (após sessão aberta) → `DocumentoValidator.isValidDocumento()` (validação externa fictícia) → `InvalidDocumentoException` (400) / `HttpIntegrationException` (503). Normalização do CPF via `Formatter` do Caelum Stella (`ThirdPartyConfiguration`) |
 | R10 — Um voto por CPF por sessão | `VotoService.votar()` → `VotoRepository.existsByIdSessaoAndDocumento()`; `VotoRepositoryAdapter.save()` → `DuplicatedVoteException`; constraint `uk_voto_sessao_documento(sessao_id, documento)` em `schema.sql` |
 | R11 — Voto apenas SIM/NÃO | Enum `Voto.Escolha { SIM, NAO }`; `HttpMessageNotReadableException` para valores inválidos |
 | R12 — Resultado só para sessão fechada | `VotoService.apurarVotosSessao()` → `SessaoService.getClosedSessaoById()` → `Sessao.isOpen(now)` com `now` de `SessaoRepository.now()` → `SessaoIsOpenException` / `SessaoNotFoundException` |
@@ -33,6 +33,7 @@ POST /sessoes
 POST /votos
   VotoController.save()
    → VotoService.votar()             [R7/R8, R9, R10]
+   → formatter.unformat()            [Caelum Stella — CPF normalizado (PF8)]
    → SessaoService.getOpenSessaoById()  [R7/R8 — Sessao.isOpen(now), now do banco]
    → DocumentoValidatorClient.isValidDocumento()  [R9 — integração externa fictícia]
    → VotoRepositoryAdapter.save()    [R10 — salvaguarda do banco]
@@ -121,9 +122,10 @@ Observações:
    deixou de ter `unique = true` (que sugeriria unicidade global do CPF). A regra efetiva é
    **um voto por CPF por sessão**: o mesmo CPF pode votar em sessões diferentes.
 5. **CPF normalizado (PF8 resolvido).** `VotoService.votar()` reduz o documento a somente
-   dígitos antes da verificação de R10 e da persistência. Os formatos com e sem pontuação são
-   armazenados de forma canônica (11 dígitos), tornando a unicidade `(sessao_id, documento)`
-   imune à variação de formatação.
+    dígitos (via `formatter.unformat` do Caelum Stella, bean `Formatter` de
+    `ThirdPartyConfiguration`) antes da verificação de R10 e da persistência. Os formatos com e
+    sem pontuação são armazenados de forma canônica (11 dígitos), tornando a unicidade
+    `(sessao_id, documento)` imune à variação de formatação.
 6. **Testes de `SessaoService` alinhados.** `SessaoServiceTest` está ativo e cobre
    `PautaNotFoundException`, `DuplicatedSessaoException` e a criação bem-sucedida, de acordo
    com a implementação atual.
@@ -147,7 +149,8 @@ Observações:
 10. **Validação externa de CPF (R9).** `VotoService.votar()` consulta o gateway
     `DocumentoValidator` — implementado por `DocumentoValidatorClient`, integração **fictícia**
     via `https://httpbin.org` (`GET /status/200,400,404,500` sorteia o status) — com o CPF já
-    normalizado, **após** a sessão ser confirmada como aberta e **antes** da duplicidade.
+    normalizado (`formatter.unformat`, Caelum Stella), **após** a sessão ser confirmada como
+    aberta e **antes** da duplicidade.
     Semântica: 200 → válido; **4xx** → `InvalidDocumentoException` (400, "Documento inválido:
     \<cpf\>"); **5xx**/indisponibilidade → `HttpIntegrationException` (**503**). Timeouts de
     500 ms e URL configuráveis em `app.documento-validator.*`
