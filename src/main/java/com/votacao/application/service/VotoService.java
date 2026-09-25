@@ -1,5 +1,6 @@
 package com.votacao.application.service;
 
+import br.com.caelum.stella.format.Formatter;
 import com.votacao.application.gateway.DocumentoValidator;
 import com.votacao.application.gateway.VotoRepository;
 import com.votacao.application.model.ResultadoVotacao;
@@ -21,21 +22,24 @@ public class VotoService {
 
     private final VotoRepository votoRepository;
     private final SessaoService sessaoService;
+    private final Formatter formatter;
     private final DocumentoValidator documentoValidator;
 
     public VotoService(
             VotoRepository votoRepository,
             SessaoService sessaoService,
+            Formatter formatter,
             DocumentoValidator documentoValidator
     ) {
         this.votoRepository = votoRepository;
         this.sessaoService = sessaoService;
+        this.formatter = formatter;
         this.documentoValidator = documentoValidator;
     }
 
     @Transactional
     public Voto votar(long idSessao, String documento, Voto.Escolha escolhaVoto) {
-        String documentoNormalizado = normalizarDocumento(documento);
+        String documentoNormalizado = formatter.unformat(documento);
 
         Sessao sessao = sessaoService.getOpenSessaoById(idSessao);
 
@@ -61,10 +65,6 @@ public class VotoService {
                         votoRepository.countByIdSessaoAndEscolha(idSessao, Voto.Escolha.NAO)
                 )
         );
-    }
-
-    private static String normalizarDocumento(String documento) {
-        return documento.replaceAll("\\D", "");
     }
 
 }
