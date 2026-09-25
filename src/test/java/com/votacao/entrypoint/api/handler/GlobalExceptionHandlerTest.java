@@ -19,6 +19,7 @@ import com.votacao.entrypoint.client.exception.HttpIntegrationException;
 import com.votacao.entrypoint.filter.MDCRequestFilter;
 import com.votacao.entrypoint.mapper.PautaMapper;
 import com.votacao.entrypoint.mapper.SessaoMapper;
+import com.votacao.entrypoint.mapper.VotoMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -59,6 +60,9 @@ class GlobalExceptionHandlerTest {
 
     @MockitoBean
     private VotoService votoService;
+
+    @MockitoBean
+    private VotoMapper votoMapper;
 
     @MockitoBean
     private SessaoMapper sessaoMapper;
