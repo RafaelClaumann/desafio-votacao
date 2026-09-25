@@ -6,7 +6,7 @@
 SKIP_TESTS ?= false
 
 build-jar:
-	./mvnw -B clean package -DskipTests=$(SKIP_TESTS) --threads 2C
+	./mvnw -B clean verify -DskipTests=$(SKIP_TESTS) --threads 2C
 
 # ============================
 # Docker
