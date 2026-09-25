@@ -34,7 +34,7 @@ public class VotoService {
     }
 
     @Transactional
-    public Voto votar(Long idSessao, String documento, Voto.Escolha escolhaVoto) {
+    public Voto votar(long idSessao, String documento, Voto.Escolha escolhaVoto) {
         String documentoNormalizado = normalizarDocumento(documento);
 
         Sessao sessao = sessaoService.getOpenSessaoById(idSessao);
@@ -52,7 +52,7 @@ public class VotoService {
         return votoRepository.save(voto);
     }
 
-    public ApuracaoSessao apurarVotosSessao(Long idSessao) {
+    public ApuracaoSessao apurarVotosSessao(long idSessao) {
         sessaoService.getClosedSessaoById(idSessao);
         return new ApuracaoSessao(
                 idSessao,

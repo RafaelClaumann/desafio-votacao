@@ -30,7 +30,7 @@ public class SessaoService {
     }
 
     @Transactional
-    public Sessao saveSessao(Long idPauta) {
+    public Sessao saveSessao(long idPauta) {
         Pauta pauta = pautaService.getPautaById(idPauta);
 
         if (sessaoRepository.existsByIdPauta(idPauta)) {
@@ -50,7 +50,7 @@ public class SessaoService {
                 .toList();
     }
 
-    public Sessao getOpenSessaoById(Long idSessao) {
+    public Sessao getOpenSessaoById(long idSessao) {
         Sessao sessao = sessaoRepository.findById(idSessao)
                 .orElseThrow(() -> new SessaoNotFoundException(idSessao));
 
@@ -62,7 +62,7 @@ public class SessaoService {
         return sessao;
     }
 
-    public Sessao getClosedSessaoById(Long idSessao) {
+    public Sessao getClosedSessaoById(long idSessao) {
         Sessao sessao = sessaoRepository.findById(idSessao)
                 .orElseThrow(() -> new SessaoNotFoundException(idSessao));
 

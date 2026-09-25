@@ -21,6 +21,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -100,7 +101,7 @@ class SessaoControllerTest {
                 .andExpect(jsonPath("$.field_errors[0].field").value("idPauta"))
                 .andExpect(jsonPath("$.field_errors[0].message").value("O id da Pauta é obrigatório"));
 
-        verify(sessaoService, never()).saveSessao(any());
+        verify(sessaoService, never()).saveSessao(anyLong());
     }
 
     @Test

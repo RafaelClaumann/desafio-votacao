@@ -24,7 +24,7 @@ public class PautaService {
         return repository.save(pauta);
     }
 
-    public Pauta getPautaById(Long idPauta) {
+    public Pauta getPautaById(long idPauta) {
         return repository.findById(idPauta).orElseThrow(() -> new PautaNotFoundException(idPauta));
     }
 
