@@ -6,4 +6,8 @@ public class DuplicatedSessaoException extends RuntimeException {
         super("Já existe uma sessão para a pauta: " + idPauta);
     }
 
+    public DuplicatedSessaoException(Long id, Throwable cause) {
+        super("Já existe uma sessão para a pauta: " + id, cause);
+    }
+
 }
