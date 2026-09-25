@@ -1,8 +1,8 @@
 package com.votacao.entrypoint.api.dto;
 
 public record PautaResponseDTO(
-        Long id,
+        long id,
         String titulo,
-        Long tempoVotacaoMinutos
+        long tempoVotacaoMinutos
 ) {
 }

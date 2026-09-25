@@ -32,13 +32,13 @@ public class VotoRepositoryAdapter implements VotoRepository {
     }
 
     @Override
-    public boolean existsBySessaoIdAndDocumento(Long idSessao, String cpf) {
-        return repository.existsBySessaoIdAndDocumento(idSessao, cpf);
+    public boolean existsByIdSessaoAndDocumento(long idSessao, String documento) {
+        return repository.existsBySessaoIdAndDocumento(idSessao, documento);
     }
 
     @Override
-    public long countBySessaoIdAndEscolha(Long sessaoId, Voto.Escolha escolha) {
-        return repository.countBySessaoIdAndEscolhaVoto(sessaoId, escolha);
+    public long countByIdSessaoAndEscolha(long idSessao, Voto.Escolha escolha) {
+        return repository.countBySessaoIdAndEscolhaVoto(idSessao, escolha);
     }
 
 }

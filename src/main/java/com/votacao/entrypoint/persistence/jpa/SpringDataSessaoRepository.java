@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 public interface SpringDataSessaoRepository extends JpaRepository<SessaoEntity, Long> {
 
-    boolean existsByPautaId(Long pautaId);
+    boolean existsByPautaId(long idPauta);
 
     @Query("SELECT CURRENT_TIMESTAMP")
     LocalDateTime now();

@@ -79,17 +79,17 @@ class PautaServiceTest {
     @Test
     @DisplayName("getPautaById should throw PautaNotFoundException when the pauta does not exist")
     void getPautaById_shouldThrow_whenPautaDoesNotExist() {
-        Long pautaId = 1L;
+        Long idPauta = 1L;
 
-        when(repository.findById(pautaId)).thenReturn(java.util.Optional.empty());
+        when(repository.findById(idPauta)).thenReturn(java.util.Optional.empty());
 
         PautaNotFoundException exception = assertThrows(
                 PautaNotFoundException.class,
-                () -> service.getPautaById(pautaId)
+                () -> service.getPautaById(idPauta)
         );
 
-        assertEquals("Pauta com id " + pautaId + " não encontrada", exception.getMessage());
-        verify(repository).findById(pautaId);
+        assertEquals("Pauta com id " + idPauta + " não encontrada", exception.getMessage());
+        verify(repository).findById(idPauta);
     }
 
 }

@@ -21,6 +21,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -47,8 +48,8 @@ class SessaoControllerTest {
     private SessaoMapper mapper;
 
     @Test
-    @DisplayName("Should create the sessao when pauta_id is informed")
-    void save_shouldCreateSessao_whenPautaIdIsInformed() throws Exception {
+    @DisplayName("Should create the sessao when id_pauta is informed")
+    void save_shouldCreateSessao_whenIdPautaIsInformed() throws Exception {
         String titulo = "Reforma estatutária do capítulo quatro";
         LocalDateTime now = LocalDateTime.now();
         Pauta pauta = new Pauta(1L, titulo, 10L);
@@ -62,7 +63,7 @@ class SessaoControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "pauta_id": 1
+                                  "id_pauta": 1
                                 }
                                 """))
                 .andExpect(status().isCreated())
@@ -80,7 +81,7 @@ class SessaoControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "pauta_id": 1
+                                  "id_pauta": 1
                                 }
                                 """))
                 .andExpect(status().isConflict())
@@ -90,17 +91,17 @@ class SessaoControllerTest {
     }
 
     @Test
-    @DisplayName("Should reject with 400 when pauta_id is missing")
-    void save_shouldReject_whenPautaIdIsMissing() throws Exception {
+    @DisplayName("Should reject with 400 when id_pauta is missing")
+    void save_shouldReject_whenIdPautaIsMissing() throws Exception {
         mockMvc.perform(post("/sessoes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Erro de validação"))
-                .andExpect(jsonPath("$.field_errors[0].field").value("pautaId"))
+                .andExpect(jsonPath("$.field_errors[0].field").value("idPauta"))
                 .andExpect(jsonPath("$.field_errors[0].message").value("O id da Pauta é obrigatório"));
 
-        verify(sessaoService, never()).saveSessao(any());
+        verify(sessaoService, never()).saveSessao(anyLong());
     }
 
     @Test

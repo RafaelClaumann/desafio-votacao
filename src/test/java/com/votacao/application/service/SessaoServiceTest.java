@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -50,16 +51,16 @@ class SessaoServiceTest {
     @Test
     @DisplayName("saveSessao should create and save a session with the pauta duration")
     void saveSessao_shouldCreateAndSaveSessionWithPautaDuration() {
-        Long pautaId = 1L;
-        Pauta pauta = new Pauta(pautaId, "Reforma estatutária do capítulo quatro", 10L);
+        Long idPauta = 1L;
+        Pauta pauta = new Pauta(idPauta, "Reforma estatutária do capítulo quatro", 10L);
         LocalDateTime now = LocalDateTime.of(2026, 9, 23, 10, 0);
 
-        when(pautaService.getPautaById(pautaId)).thenReturn(pauta);
-        when(sessaoRepository.existsByPautaId(pautaId)).thenReturn(false);
+        when(pautaService.getPautaById(idPauta)).thenReturn(pauta);
+        when(sessaoRepository.existsByIdPauta(idPauta)).thenReturn(false);
         when(sessaoRepository.now()).thenReturn(now);
         when(sessaoRepository.save(any(Sessao.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Sessao result = sessaoService.saveSessao(pautaId);
+        Sessao result = sessaoService.saveSessao(idPauta);
 
         ArgumentCaptor<Sessao> sessaoCaptor = ArgumentCaptor.forClass(Sessao.class);
         verify(sessaoRepository).save(sessaoCaptor.capture());
@@ -73,141 +74,141 @@ class SessaoServiceTest {
                 () -> assertEquals(savedSession.startedAt(), result.startedAt()),
                 () -> assertEquals(savedSession.expiresAt(), result.expiresAt())
         );
-        verify(pautaService).getPautaById(pautaId);
+        verify(pautaService).getPautaById(idPauta);
     }
 
     @Test
     @DisplayName("saveSessao should throw PautaNotFoundException when the pauta does not exist")
     void saveSessao_shouldThrowWhenPautaDoesNotExist() {
-        Long pautaId = 1L;
+        Long idPauta = 1L;
 
-        when(pautaService.getPautaById(pautaId)).thenThrow(new PautaNotFoundException(pautaId));
+        when(pautaService.getPautaById(idPauta)).thenThrow(new PautaNotFoundException(idPauta));
 
         PautaNotFoundException exception = assertThrows(
                 PautaNotFoundException.class,
-                () -> sessaoService.saveSessao(pautaId)
+                () -> sessaoService.saveSessao(idPauta)
         );
 
-        assertEquals("Pauta com id " + pautaId + " não encontrada", exception.getMessage());
-        verify(sessaoRepository, never()).existsByPautaId(any());
+        assertEquals("Pauta com id " + idPauta + " não encontrada", exception.getMessage());
+        verify(sessaoRepository, never()).existsByIdPauta(anyLong());
         verify(sessaoRepository, never()).save(any(Sessao.class));
     }
 
     @Test
     @DisplayName("saveSessao should throw DuplicatedSessaoException when the pauta already has a session")
     void saveSessao_shouldThrowWhenSessionAlreadyExistsForPauta() {
-        Long pautaId = 1L;
-        Pauta pauta = new Pauta(pautaId, "Reforma estatutária do capítulo quatro", 10L);
+        Long idPauta = 1L;
+        Pauta pauta = new Pauta(idPauta, "Reforma estatutária do capítulo quatro", 10L);
 
-        when(pautaService.getPautaById(pautaId)).thenReturn(pauta);
-        when(sessaoRepository.existsByPautaId(pautaId)).thenReturn(true);
+        when(pautaService.getPautaById(idPauta)).thenReturn(pauta);
+        when(sessaoRepository.existsByIdPauta(idPauta)).thenReturn(true);
 
         DuplicatedSessaoException exception = assertThrows(
                 DuplicatedSessaoException.class,
-                () -> sessaoService.saveSessao(pautaId)
+                () -> sessaoService.saveSessao(idPauta)
         );
 
-        assertEquals("Já existe uma sessão para a pauta: " + pautaId, exception.getMessage());
+        assertEquals("Já existe uma sessão para a pauta: " + idPauta, exception.getMessage());
         verify(sessaoRepository, never()).save(any(Sessao.class));
     }
 
     @Test
     @DisplayName("getOpenSessaoById should return the session when it is open")
     void getOpenSessaoById_shouldReturnOpenSession() {
-        Long sessaoId = 1L;
-        Sessao sessao = new Sessao(sessaoId, PAUTA, BASE_DATE_TIME, BASE_DATE_TIME.plusMinutes(10));
+        Long idSessao = 1L;
+        Sessao sessao = new Sessao(idSessao, PAUTA, BASE_DATE_TIME, BASE_DATE_TIME.plusMinutes(10));
 
-        when(sessaoRepository.findById(sessaoId)).thenReturn(Optional.of(sessao));
+        when(sessaoRepository.findById(idSessao)).thenReturn(Optional.of(sessao));
         when(sessaoRepository.now()).thenReturn(BASE_DATE_TIME);
 
-        Sessao result = sessaoService.getOpenSessaoById(sessaoId);
+        Sessao result = sessaoService.getOpenSessaoById(idSessao);
 
         assertEquals(sessao, result);
-        verify(sessaoRepository).findById(sessaoId);
+        verify(sessaoRepository).findById(idSessao);
         verify(sessaoRepository).now();
     }
 
     @Test
     @DisplayName("getOpenSessaoById should throw SessaoNotFoundException when the session does not exist")
     void getOpenSessaoById_shouldThrowWhenSessionDoesNotExist() {
-        Long sessaoId = 1L;
+        Long idSessao = 1L;
 
-        when(sessaoRepository.findById(sessaoId)).thenReturn(Optional.empty());
+        when(sessaoRepository.findById(idSessao)).thenReturn(Optional.empty());
 
-        assertThrows(SessaoNotFoundException.class, () -> sessaoService.getOpenSessaoById(sessaoId));
+        assertThrows(SessaoNotFoundException.class, () -> sessaoService.getOpenSessaoById(idSessao));
 
-        verify(sessaoRepository).findById(sessaoId);
+        verify(sessaoRepository).findById(idSessao);
     }
 
     @Test
     @DisplayName("getOpenSessaoById should throw SessaoIsClosedException when the session is closed")
     void getOpenSessaoById_shouldThrowWhenSessionIsClosed() {
-        Long sessaoId = 1L;
-        Sessao closed = new Sessao(sessaoId, PAUTA, BASE_DATE_TIME.minusMinutes(20), BASE_DATE_TIME.minusMinutes(10));
+        Long idSessao = 1L;
+        Sessao closed = new Sessao(idSessao, PAUTA, BASE_DATE_TIME.minusMinutes(20), BASE_DATE_TIME.minusMinutes(10));
 
-        when(sessaoRepository.findById(sessaoId)).thenReturn(Optional.of(closed));
+        when(sessaoRepository.findById(idSessao)).thenReturn(Optional.of(closed));
         when(sessaoRepository.now()).thenReturn(BASE_DATE_TIME);
 
         SessaoIsClosedException exception = assertThrows(
                 SessaoIsClosedException.class,
-                () -> sessaoService.getOpenSessaoById(sessaoId)
+                () -> sessaoService.getOpenSessaoById(idSessao)
         );
 
-        assertEquals("A sessão " + sessaoId + " está fechada", exception.getMessage());
-        verify(sessaoRepository).findById(sessaoId);
+        assertEquals("A sessão " + idSessao + " está fechada", exception.getMessage());
+        verify(sessaoRepository).findById(idSessao);
         verify(sessaoRepository).now();
     }
 
     @Test
     @DisplayName("getClosedSessaoById should return the session when it is closed")
     void getClosedSessaoById_shouldReturnClosedSession() {
-        Long sessaoId = 1L;
-        Sessao closed = new Sessao(sessaoId, PAUTA, BASE_DATE_TIME.minusMinutes(20), BASE_DATE_TIME.minusMinutes(10));
+        Long idSessao = 1L;
+        Sessao closed = new Sessao(idSessao, PAUTA, BASE_DATE_TIME.minusMinutes(20), BASE_DATE_TIME.minusMinutes(10));
 
-        when(sessaoRepository.findById(sessaoId)).thenReturn(Optional.of(closed));
+        when(sessaoRepository.findById(idSessao)).thenReturn(Optional.of(closed));
         when(sessaoRepository.now()).thenReturn(BASE_DATE_TIME);
 
-        Sessao result = sessaoService.getClosedSessaoById(sessaoId);
+        Sessao result = sessaoService.getClosedSessaoById(idSessao);
 
         assertEquals(closed, result);
-        verify(sessaoRepository).findById(sessaoId);
+        verify(sessaoRepository).findById(idSessao);
         verify(sessaoRepository).now();
     }
 
     @Test
     @DisplayName("getClosedSessaoById should throw SessaoIsOpenException when the session is still open")
     void getClosedSessaoById_shouldThrowWhenSessionIsOpen() {
-        Long sessaoId = 1L;
-        Sessao open = new Sessao(sessaoId, PAUTA, BASE_DATE_TIME, BASE_DATE_TIME.plusMinutes(10));
+        Long idSessao = 1L;
+        Sessao open = new Sessao(idSessao, PAUTA, BASE_DATE_TIME, BASE_DATE_TIME.plusMinutes(10));
 
-        when(sessaoRepository.findById(sessaoId)).thenReturn(Optional.of(open));
+        when(sessaoRepository.findById(idSessao)).thenReturn(Optional.of(open));
         when(sessaoRepository.now()).thenReturn(BASE_DATE_TIME);
 
         SessaoIsOpenException exception = assertThrows(
                 SessaoIsOpenException.class,
-                () -> sessaoService.getClosedSessaoById(sessaoId)
+                () -> sessaoService.getClosedSessaoById(idSessao)
         );
 
-        assertEquals("A sessão " + sessaoId + " ainda está aberta", exception.getMessage());
-        verify(sessaoRepository).findById(sessaoId);
+        assertEquals("A sessão " + idSessao + " ainda está aberta", exception.getMessage());
+        verify(sessaoRepository).findById(idSessao);
         verify(sessaoRepository).now();
     }
 
     @Test
     @DisplayName("getOpenSessaoById should propagate the repository exception")
     void getOpenSessaoById_shouldPropagateRepositoryException() {
-        Long sessaoId = 1L;
+        Long idSessao = 1L;
         IllegalStateException repositoryException = new IllegalStateException("Repository unavailable");
 
-        when(sessaoRepository.findById(sessaoId)).thenThrow(repositoryException);
+        when(sessaoRepository.findById(idSessao)).thenThrow(repositoryException);
 
         IllegalStateException exception = assertThrows(
                 IllegalStateException.class,
-                () -> sessaoService.getOpenSessaoById(sessaoId)
+                () -> sessaoService.getOpenSessaoById(idSessao)
         );
 
         assertEquals(repositoryException, exception);
-        verify(sessaoRepository).findById(sessaoId);
+        verify(sessaoRepository).findById(idSessao);
     }
 
     @Test

@@ -5,7 +5,7 @@ traduz isso para a API.
 
 | HTTP  | Situação de negócio                                                              | Exceção / origem                                    |
 | ----- | -------------------------------------------------------------------------------- | --------------------------------------------------- |
-| 400    | Dados de entrada inválidos (título, duração, sessão/`pauta_id`, CPF, escolha).     | `MethodArgumentNotValidException` (Bean Validation) |
+| 400    | Dados de entrada inválidos (título, duração, sessão/`id_pauta`, CPF, escolha).     | `MethodArgumentNotValidException` (Bean Validation) |
 | 400    | Documento (CPF) rejeitado pelo **validador externo** (R9).                        | `InvalidDocumentoException`                        |
 | 400    | Corpo da requisição ilegível — ex.: escolha fora de SIM/NAO, JSON malformado.    | `HttpMessageNotReadableException`                 |
 | 400    | Parâmetro de caminho com tipo inválido (ex.: id não numérico).                    | `MethodArgumentTypeMismatchException`              |
@@ -48,7 +48,7 @@ integridade na mesma `DuplicatedSessaoException` → igualmente **409**.
 
 ### Concorrência ao votar com o mesmo CPF na mesma sessão
 
-A verificação prévia (`existsBySessaoIdAndDocumento`) evita duplicidade na maioria dos casos.
+A verificação prévia (`existsByIdSessaoAndDocumento`) evita duplicidade na maioria dos casos.
 Se duas requisições simultâneas passarem pela verificação ao mesmo tempo, a restrição única do
 banco captura a duplicidade e o `VotoRepositoryAdapter` a converte em `DuplicatedVoteException`
 → **HTTP 409**. O mesmo tratamento de integridade existe para o título da pauta.

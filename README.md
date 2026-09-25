@@ -10,6 +10,8 @@ de votação, registrar votos (SIM/NÃO) e apurar resultados após o fechamento 
 - **Java 21**
 - **Maven** (o projeto inclui o wrapper `./mvnw`)
 - **Banco em memória (H2)** — os dados são perdidos ao encerrar a aplicação
+- **PostgreSQL** no perfil de produção (`prod`), com integração fictícia de validação de CPF via
+  `https://httpbin.org`
 
 ## Como executar
 
@@ -37,10 +39,10 @@ Executar os testes:
 ## Fluxo típico de uso
 
 1. **POST /pautas** — cria a pauta com título e duração (min).
-2. **POST /sessoes** — abre a votação da pauta (`pauta_id`). O sistema usa a duração da pauta.
+2. **POST /sessoes** — abre a votação da pauta (`id_pauta`). O sistema usa a duração da pauta.
    A sessão fica aberta e **fecha sozinha** ao expirar.
 3. **POST /votos** — associados votam SIM/NÃO com CPF enquanto a sessão estiver aberta.
-4. **GET /sessoes/{id}/resultado** — apura e divulga o resultado **após o fechamento** da sessão.
+4. **GET /sessoes/{idSessao}/resultado** — apura e divulga o resultado **após o fechamento** da sessão.
 
 ---
 
@@ -138,7 +140,7 @@ Uma pauta só pode ter **uma única sessão** (mesmo após o fechamento).
 
 ```json
 {
-  "pauta_id": 1
+  "id_pauta": 1
 }
 ```
 
@@ -147,7 +149,7 @@ Uma pauta só pode ter **uma única sessão** (mesmo após o fechamento).
 ```bash
 curl -X POST http://localhost:8080/sessoes \
   -H 'Content-Type: application/json' \
-  -d '{"pauta_id":1}'
+  -d '{"id_pauta":1}'
 ```
 
 **Resposta 201 (Created):**
@@ -163,12 +165,13 @@ curl -X POST http://localhost:8080/sessoes \
 }
 ```
 
-`is_open` é calculado no momento da resposta: `true` enquanto `agora < expires_at`.
-`titulo_pauta` traz o título da pauta votada, para facilitar a leitura da sessão.
+O controller informa `is_open=true` na resposta de criação. Consultas posteriores calculam o
+estado pelo relógio do banco de dados (`agora < expires_at`). `titulo_pauta` traz o título da
+pauta votada, para facilitar a leitura da sessão.
 
 **Erros:**
 
-- `400` — `pauta_id` **ausente ou nulo** ("O id da Pauta é obrigatório").
+- `400` — `id_pauta` **ausente ou nulo** ("O id da Pauta é obrigatório").
 - `400` — a pauta não existe.
 - `409` — a pauta já possui sessão ("Já existe uma sessão para a pauta: N"); consulte a
   pauta/lista de sessões antes de tentar abrir.
@@ -239,9 +242,14 @@ curl -X POST http://localhost:8080/votos \
 
 ```json
 {
+  "id": 1,
   "id_sessao": 1,
+  "id_pauta": 1,
+  "titulo_pauta": "Reforma estatutária do capítulo quatro",
   "documento": "12345678909",
-  "escolha_voto": "SIM"
+  "escolha_voto": "SIM",
+  "started_at": "2026-09-23T10:00:00",
+  "expires_at": "2026-09-23T10:10:00"
 }
 ```
 
@@ -254,8 +262,9 @@ curl -X POST http://localhost:8080/votos \
 - `409` — o mesmo CPF **já votou** nesta sessão.
 - `503` — falha no serviço externo de validação de CPF (timeout de 500 ms).
 
-> **Atenção:** antes de validar e gravar, o sistema **normaliza o CPF para somente dígitos**.
-> Os formatos com e sem pontuação são tratados como o **mesmo documento**.
+> **Atenção:** antes de validar e gravar, o sistema **normaliza o CPF para somente dígitos**
+> (via `CPFFormatter` do Caelum Stella). Os formatos com e sem pontuação são tratados como o
+> **mesmo documento**.
 
 ---
 
@@ -307,11 +316,12 @@ Toda resposta de erro segue o formato:
 
 ```json
 {
-  "timestamp": "2026-09-23T10:00:01",
+  "timestamp": "2026-09-23T10:00:01Z",
   "status": 400,
   "error": "Bad Request",
   "message": "mensagem do erro",
   "path": "/votos",
+  "correlation_id": "uuid-da-requisicao",
   "field_errors": [
     { "field": "documento", "message": "O documento é obrigatório" }
   ]
@@ -319,8 +329,11 @@ Toda resposta de erro segue o formato:
 ```
 
 - `field_errors` é preenchido apenas em erros de validação (`400`).
-- Erros de negócio retornam 400/409 (ver descrito em cada operação); falhas não previstas
-  retornam `500`.
+- O `MDCRequestFilter` usa o header `X-Correlation-Id` recebido (ou gera um UUID), ecoa o valor no
+  header de resposta e o `GlobalExceptionHandler` o inclui como `correlation_id`.
+- Erros de negócio retornam 400/409 (ver descrito em cada operação); 503 para falha da validação
+  externa de documento; falhas não previstas retornam `500` com mensagem genérica e
+  `correlation_id`.
 
 ## Resumo das regras de negócio
 
@@ -350,7 +363,7 @@ curl -X POST http://localhost:8080/pautas \
 # 2. Abrir a sessão (guardar o "id" retornado, ex.: 1)
 curl -X POST http://localhost:8080/sessoes \
   -H 'Content-Type: application/json' \
-  -d '{"pauta_id":1}'
+  -d '{"id_pauta":1}'
 
 # 3. Votar SIM e NAO (com CPFs distintos)
 curl -X POST http://localhost:8080/votos \

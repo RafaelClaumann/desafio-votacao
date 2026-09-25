@@ -10,11 +10,11 @@ public interface SessaoRepository {
 
     Sessao save(Sessao sessao);
 
-    boolean existsByPautaId(Long pautaId);
+    boolean existsByIdPauta(long idPauta);
 
     List<Sessao> findAll();
 
-    Optional<Sessao> findById(Long sessaoId);
+    Optional<Sessao> findById(long idSessao);
 
     LocalDateTime now();
 

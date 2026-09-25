@@ -36,8 +36,8 @@ public class SessaoRepositoryAdapter implements SessaoRepository {
     }
 
     @Override
-    public boolean existsByPautaId(Long pautaId) {
-        return repository.existsByPautaId(pautaId);
+    public boolean existsByIdPauta(long idPauta) {
+        return repository.existsByPautaId(idPauta);
     }
 
     @Override
@@ -46,8 +46,8 @@ public class SessaoRepositoryAdapter implements SessaoRepository {
     }
 
     @Override
-    public Optional<Sessao> findById(Long sessaoId) {
-        return repository.findById(sessaoId).map(mapper::toDomain);
+    public Optional<Sessao> findById(long idSessao) {
+        return repository.findById(idSessao).map(mapper::toDomain);
     }
 
     @Override

@@ -82,7 +82,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"pauta_id\": 1\n}",
+              "raw": "{\n  \"id_pauta\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
