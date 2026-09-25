@@ -34,7 +34,7 @@ jobs:
           printf "current_dir: $PWD\n"
           ls -ll
           
-          ./mvnw -B clean install --threads 2C
+          make build-jar
 
       - name: Check JaCoCo Coverage
         uses: cicirello/jacoco-badge-generator@v2
