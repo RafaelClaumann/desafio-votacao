@@ -3,16 +3,14 @@ package com.votacao.entrypoint.persistence.jpa;
 import com.votacao.entrypoint.persistence.entity.SessaoEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
-import java.util.List;
-import java.util.Set;
+import java.time.LocalDateTime;
 
 public interface SpringDataSessaoRepository extends JpaRepository<SessaoEntity, Long> {
 
-    boolean existsByPautaId(Long pautaId);
+    boolean existsByPautaId(long idPauta);
 
-    @Query("SELECT s.pauta.id FROM SessaoEntity s WHERE s.pauta.id IN :pautaIds")
-    Set<Long> findPautaIdsComSessao(@Param("pautaIds") List<Long> pautaIds);
+    @Query("SELECT CURRENT_TIMESTAMP")
+    LocalDateTime now();
 
 }

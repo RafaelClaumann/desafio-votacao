@@ -8,8 +8,8 @@ package com.votacao.entrypoint.api.dto;
  * @param tempoVotacaoMinutos duração da sessão em minutos
  */
 public record PautaResponseDTO(
-        Long id,
+        long id,
         String titulo,
-        Long tempoVotacaoMinutos
+        long tempoVotacaoMinutos
 ) {
 }

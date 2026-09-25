@@ -11,7 +11,7 @@ public class SessaoNotFoundException extends RuntimeException {
      * @param id identificador da sessão
      */
     public SessaoNotFoundException(Long id) {
-        super("Sessão not found with id: " + id);
+        super("Sessão com id " + id + " não encontrada");
     }
 
 }

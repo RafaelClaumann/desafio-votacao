@@ -12,7 +12,7 @@ public class DuplicatedVoteException extends RuntimeException {
      * @param documento documento duplicado
      */
     public DuplicatedVoteException(Long idSessao, String documento) {
-        super("Duplicated vote for document: " + documento + " in session with id: " + idSessao);
+        super("O documento " + documento + " já votou na sessão " + idSessao);
     }
 
 }

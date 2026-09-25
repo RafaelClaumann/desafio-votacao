@@ -12,7 +12,7 @@ import com.votacao.application.model.StatusVotacao;
  * @param status status final da votação
  */
 public record ResultadoVotacaoResponse(
-        Long idSessao,
+        long idSessao,
         long votosSim,
         long votosNao,
         long total,

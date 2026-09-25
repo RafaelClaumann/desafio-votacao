@@ -4,10 +4,12 @@ import com.votacao.application.model.Sessao;
 import com.votacao.application.service.SessaoService;
 import com.votacao.application.service.VotoService;
 import com.votacao.application.service.query.ApuracaoSessao;
+import com.votacao.application.service.query.SessaoComStatus;
 import com.votacao.entrypoint.api.dto.ResultadoVotacaoResponse;
 import com.votacao.entrypoint.api.dto.SessaoDTO;
 import com.votacao.entrypoint.api.dto.SessaoResponseDTO;
 import com.votacao.entrypoint.mapper.SessaoMapper;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -48,8 +50,8 @@ public class SessaoController {
      * @return sessão criada com URI de localização
      */
     @PostMapping
-    public ResponseEntity<SessaoResponseDTO> save(@RequestBody final SessaoDTO requestBody) {
-        Sessao saved = service.saveSessao(requestBody.pautaId());
+    public ResponseEntity<SessaoResponseDTO> save(@RequestBody @Valid final SessaoDTO requestBody) {
+        Sessao saved = service.saveSessao(requestBody.idPauta());
 
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
@@ -57,7 +59,7 @@ public class SessaoController {
                 .buildAndExpand(saved.id())
                 .toUri();
 
-        return ResponseEntity.created(location).body(mapper.toDTO(saved));
+        return ResponseEntity.created(location).body(mapper.toDTO(new SessaoComStatus(saved, true)));
     }
 
     /**
@@ -67,8 +69,7 @@ public class SessaoController {
      */
     @GetMapping
     public ResponseEntity<List<SessaoResponseDTO>> fetch() {
-        List<Sessao> sessoes = service.getSessoes();
-        return ResponseEntity.ok(mapper.toDTOList(sessoes));
+        return ResponseEntity.ok(mapper.toDTOList(service.getSessoesComStatus()));
     }
 
     /**

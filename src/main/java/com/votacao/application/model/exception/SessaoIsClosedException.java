@@ -11,7 +11,7 @@ public class SessaoIsClosedException extends RuntimeException {
      * @param id identificador da sessão
      */
     public SessaoIsClosedException(Long id) {
-        super("Sessão with id: " + id + " is closed");
+        super("A sessão " + id + " está fechada");
     }
 
 }

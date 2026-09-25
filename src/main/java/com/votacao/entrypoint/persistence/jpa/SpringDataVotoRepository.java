@@ -6,8 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SpringDataVotoRepository extends JpaRepository<VotoEntity, Long> {
 
-    boolean existsBySessaoIdAndDocumento(Long idSessao, String cpf);
+    boolean existsBySessaoIdAndDocumento(long idSessao, String documento);
 
-    long countBySessaoIdAndEscolhaVoto(Long idSessao, Voto.Escolha escolha);
+    long countBySessaoIdAndEscolhaVoto(long idSessao, Voto.Escolha escolha);
 
 }

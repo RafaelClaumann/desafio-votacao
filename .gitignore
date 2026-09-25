@@ -34,3 +34,6 @@ build/
 
 ### Idea ###
 .idea/
+
+### Logs ###
+.logs/

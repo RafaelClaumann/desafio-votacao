@@ -12,8 +12,9 @@ import java.time.LocalDateTime;
  * @param isOpen indica se a sessão está aberta no momento da resposta
  */
 public record SessaoResponseDTO(
-        Long id,
-        Long idPauta,
+        long id,
+        long idPauta,
+        String tituloPauta,
         LocalDateTime startedAt,
         LocalDateTime expiresAt,
         boolean isOpen

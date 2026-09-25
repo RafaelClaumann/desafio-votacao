@@ -1,5 +1,5 @@
 ---
-name: commit-message-writer
+name: git-commit-message-writer
 description: Writes a Conventional Commits message based on the current staged diff
 ---
 

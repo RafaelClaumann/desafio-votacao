@@ -11,7 +11,7 @@ public class PautaNotFoundException extends RuntimeException {
      * @param id identificador da pauta
      */
     public PautaNotFoundException(Long id) {
-        super("Pauta not found with id: " + id);
+        super("Pauta com id " + id + " não encontrada");
     }
 
 }

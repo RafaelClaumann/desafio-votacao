@@ -23,6 +23,10 @@ public record ResultadoVotacao(long totalVotosSim, long totalVotosNao) {
      * @return enum representando a situação da pauta
      */
     public StatusVotacao status() {
+        if (totalVotos() == 0) {
+            return StatusVotacao.SEM_VOTOS;
+        }
+
         if (totalVotosSim > totalVotosNao) return StatusVotacao.APROVADA;
         if (totalVotosSim < totalVotosNao) return StatusVotacao.REJEITADA;
         return StatusVotacao.EMPATE;

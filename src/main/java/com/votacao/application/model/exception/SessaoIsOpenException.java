@@ -11,7 +11,7 @@ public class SessaoIsOpenException extends RuntimeException {
      * @param id identificador da sessão
      */
     public SessaoIsOpenException(Long id) {
-        super("Sessão with id: " + id + " is open");
+        super("A sessão " + id + " ainda está aberta");
     }
 
 }

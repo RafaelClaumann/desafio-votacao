@@ -1,5 +1,5 @@
 ---
-name: java-springboot
+name: java-spring-boot
 description: 'Get best practices for developing applications with Spring Boot.'
 ---
 

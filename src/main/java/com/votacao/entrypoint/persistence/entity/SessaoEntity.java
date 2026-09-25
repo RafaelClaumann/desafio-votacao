@@ -24,7 +24,7 @@ public class SessaoEntity {
     private Long id;
 
     @OneToOne
-    @JoinColumn(name = "pauta_id", nullable = false)
+    @JoinColumn(name = "id_pauta", nullable = false)
     private PautaEntity pauta;
 
     @Column(name = "started_at", nullable = false)
