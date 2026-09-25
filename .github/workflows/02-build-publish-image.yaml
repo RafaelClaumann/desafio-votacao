@@ -26,7 +26,7 @@ jobs:
           cache: 'maven'
 
       - name: Build Target JAR
-        run: ./mvnw -B clean package -DskipTests
+        run: make build-jar SKIP_TESTS="true"
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -83,18 +83,30 @@ jobs:
 
       - name: Smoke test
         run: |
-          TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
-          echo "Testing: $TAG"
-          docker run -d --name app -p 8080:8080 "$TAG"
-          sleep 15
-          curl --fail http://localhost:8080/actuator/health
+          set -euo pipefail
+
+          IMAGE_LOWER_CASE=$(echo "ghcr.io/${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          TAG="${{ steps.meta.outputs.version }}"
+          
+          make run NAME="app" IMAGE="$IMAGE_LOWER_CASE" TAG="$TAG" PROFILE="default"
+          
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8080/actuator/health && break
+            [ "$i" -eq 30 ] && { docker logs app; exit 1; }
+            sleep 1
+          done
+          
           docker logs app
-          docker stop app
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f app 2>/dev/null || true
 
       - name: Push GHCR
-        run: |
-          echo "${{ steps.meta.outputs.tags }}" | while read -r TAG; do
-            [ -z "$TAG" ] && continue
-            echo "→ Publishing $TAG"
-            docker push "$TAG"
-          done
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
