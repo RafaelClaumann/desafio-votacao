@@ -6,6 +6,12 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
+/**
+ * Payload para criação de uma pauta.
+ *
+ * @param titulo título da pauta
+ * @param tempoVotacaoMinutos duração da sessão em minutos
+ */
 public record PautaRequestDTO(
         @Size(min = 20, max = 150)
         @NotBlank(message = "O título é obrigatório")
