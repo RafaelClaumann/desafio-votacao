@@ -47,7 +47,8 @@ POST /pautas
 **Impacto**: originalmente Alta — corrigido; sem impacto residual (validação na entrada).
 
 **Evidência**: `PautaRequestDTO` (`@Positive tempoVotacaoMinutos`, `@NotNull`);
-teste `PautaRequestDTOValidationTest`; `SessaoService.saveSessao()`
+teste `PautaControllerTest.save_shouldReject_whenDurationIsNotPositive`;
+`SessaoService.saveSessao()`
 (`now.plusMinutes(dur)`, com `now` vindo do relógio do banco), abertura condicionada a
 `expires_at > CURRENT_TIMESTAMP` (R7/R8), R5.
 
@@ -483,7 +484,7 @@ POST /votos
 com mensagem estável; `buildResponse` lê `MDC.get(MDC_CORRELATION_ID_KEY)`); `ApiError` (campo
 `String correlationId` → `correlation_id`); `MDCRequestFilter` (`@Order(HIGHEST_PRECEDENCE)`,
 constantes `CORRELATION_ID_HEADER`/`MDC_CORRELATION_ID_KEY`, ecoa o header, `MDC.remove(...)` no
-`finally`, `shouldNotFilterAsyncDispatch()`); exceções de negócio com mensagens PT-BR;
+`finally`); exceções de negócio com mensagens PT-BR;
 `HttpIntegrationException` (construtor `HttpStatusCode`); `DocumentoValidatorClient` (lançamentos
 sem `getMessage()`); testes `MDCRequestFilterTest` e `GlobalExceptionHandlerTest`. O `correlationId`
 é **gerado manualmente** (MDC) — em branches futuros será migrado para o tracing do Spring Boot
