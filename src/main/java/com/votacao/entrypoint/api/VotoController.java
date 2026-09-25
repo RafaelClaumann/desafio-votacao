@@ -3,6 +3,8 @@ package com.votacao.entrypoint.api;
 import com.votacao.application.model.Voto;
 import com.votacao.application.service.VotoService;
 import com.votacao.entrypoint.api.dto.VotoDTO;
+import com.votacao.entrypoint.api.dto.VotoResponseDTO;
+import com.votacao.entrypoint.mapper.VotoMapper;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,13 +20,15 @@ import java.net.URI;
 public class VotoController {
 
     private final VotoService service;
+    private final VotoMapper mapper;
 
-    public VotoController(VotoService service) {
+    public VotoController(VotoService service, VotoMapper mapper) {
         this.service = service;
+        this.mapper = mapper;
     }
 
     @PostMapping
-    public ResponseEntity<VotoDTO> save(@RequestBody @Valid final VotoDTO requestBody) {
+    public ResponseEntity<VotoResponseDTO> save(@RequestBody @Valid final VotoDTO requestBody) {
         Voto saved = service.votar(
                 requestBody.idSessao(),
                 requestBody.documento(),
@@ -37,7 +41,7 @@ public class VotoController {
                 .buildAndExpand(saved.id())
                 .toUri();
 
-        return ResponseEntity.created(location).body(VotoDTO.fromDomain(saved));
+        return ResponseEntity.created(location).body(mapper.toResponse(saved));
     }
 
 }
