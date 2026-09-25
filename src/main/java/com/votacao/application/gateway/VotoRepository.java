@@ -6,8 +6,8 @@ public interface VotoRepository {
 
     Voto save(Voto voto);
 
-    boolean existsByIdSessaoAndDocumento(Long idSessao, String documento);
+    boolean existsByIdSessaoAndDocumento(long idSessao, String documento);
 
-    long countByIdSessaoAndEscolha(Long idSessao, Voto.Escolha escolha);
+    long countByIdSessaoAndEscolha(long idSessao, Voto.Escolha escolha);
 
 }
