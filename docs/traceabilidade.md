@@ -5,14 +5,14 @@ Mapa das regras de negócio para as classes e métodos que as implementam.
 | Regra | Implementação |
 | ----- | ------------- |
 | R1 — Campos obrigatórios da pauta | `PautaRequestDTO` (`@NotBlank`, `@NotNull`); `PautaEntity` (colunas `NOT NULL`) |
-| R2 — Título único da pauta | `PautaService.savePauta()` → `PautaRepository.existsByTituloIgnoreCase()`; `PautaRepositoryAdapter.save()` captura `DataIntegrityViolationException` → `DuplicatedPautaException`; salvaguarda do banco `uk_pauta_titulo_lower`: em H2, coluna gerada `titulo_normalizado (LOWER(titulo))` no `schema.sql`; em PostgreSQL, índice funcional `LOWER(titulo)` em `.docker/postgres/init.sql` |
+| R2 — Título único da pauta | `PautaService.savePauta()` → `PautaRepository.existsByTituloIgnoreCase()`; `PautaRepositoryAdapter.save()` captura `DataIntegrityViolationException` → `DuplicatedPautaException` (com a violação original como causa); salvaguarda do banco `uk_pauta_titulo_lower`: em H2, coluna gerada `titulo_normalizado (LOWER(titulo))` no `schema.sql`; em PostgreSQL, índice funcional `LOWER(titulo)` em `.docker/postgres/init.sql` |
 | R3 — Normalização e tamanho do título | `Pauta` (constructor faz `titulo.trim()`); `PautaRequestDTO` (`@Size(20–150)`); `titulo VARCHAR(150)` em `schema.sql` |
 | R4 — Sessão exige pauta existente | `SessaoDTO` (`@NotNull idPauta`) + `SessaoController.save()` (`@Valid`); `SessaoService.saveSessao()` → `PautaService.getPautaById()` → `PautaNotFoundException` |
-| R5 — Uma sessão por pauta | `SessaoService.saveSessao()` → `sessaoRepository.existsByIdPauta()` → `DuplicatedSessaoException`; `SessaoRepositoryAdapter.save()` converte a violação do índice único `uk_sessao_pauta(sessoes.id_pauta)` em `schema.sql` |
+| R5 — Uma sessão por pauta | `SessaoService.saveSessao()` → `sessaoRepository.existsByIdPauta()` → `DuplicatedSessaoException`; `SessaoRepositoryAdapter.save()` converte a violação do índice único `uk_sessao_pauta(sessoes.id_pauta)` em `schema.sql` (com a violação original como causa) |
 | R6 — Duração definida pela pauta | `PautaRequestDTO` (`@Positive` + `@Max(43200)` em `tempoVotacaoMinutos`); `SessaoService.saveSessao()`: `expiresAt = sessaoRepository.now().plusMinutes(...)` (relógio do banco) |
 | R7/R8 — Votos somente em sessão aberta | `VotoService.votar()` → `SessaoService.getOpenSessaoById()` → `Sessao.isOpen(now)` (`now.isBefore(expiresAt)`) e `SessaoIsClosedException`; `now` de `SessaoRepository.now()` |
 | R9 — CPF válido | `VotoDTO` (anotação `@CPF`) + `VotoService.votar()` (após sessão aberta) → `DocumentoValidator.isValidDocumento()` (validação externa fictícia) → `InvalidDocumentoException` (400) / `HttpIntegrationException` (503). Normalização do CPF via `Formatter` do Caelum Stella (`ThirdPartyConfiguration`) |
-| R10 — Um voto por CPF por sessão | `VotoService.votar()` → `VotoRepository.existsByIdSessaoAndDocumento()`; `VotoRepositoryAdapter.save()` → `DuplicatedVoteException`; constraint `uk_voto_sessao_documento(sessao_id, documento)` em `schema.sql` |
+| R10 — Um voto por CPF por sessão | `VotoService.votar()` → `VotoRepository.existsByIdSessaoAndDocumento()`; `VotoRepositoryAdapter.save()` → `DuplicatedVoteException` (com a violação original como causa); constraint `uk_voto_sessao_documento(sessao_id, documento)` em `schema.sql` |
 | R11 — Voto apenas SIM/NÃO | Enum `Voto.Escolha { SIM, NAO }`; `HttpMessageNotReadableException` para valores inválidos |
 | R12 — Resultado só para sessão fechada | `VotoService.apurarVotosSessao()` → `SessaoService.getClosedSessaoById()` → `Sessao.isOpen(now)` com `now` de `SessaoRepository.now()` → `SessaoIsOpenException` / `SessaoNotFoundException` |
 | R13 — Status por maioria simples | `ResultadoVotacao.status()`; contagem em `VotoRepository.countByIdSessaoAndEscolha()` |
@@ -111,7 +111,9 @@ Observações:
 2. **`DuplicatedSessaoException` para R5.** `SessaoService.saveSessao()` usa
    `existsByIdPauta` e lança essa exceção (mapeada para 409). Em corrida, a violação do
    índice único em `SessaoRepositoryAdapter` também é convertida na mesma exceção (mesmo
-   padrão dos adapters de Pauta e Voto).
+   padrão dos adapters de Pauta e Voto). Os três adapters encadeiam a
+   `DataIntegrityViolationException` original como causa (`Throwable cause`) nas
+   `Duplicated*Exception`, mantendo a mensagem do contrato e o detalhe do banco no log.
 3. **Sem indicador `hasSessao` para pautas (PF11 resolvido).** O record `PautaComStatus`, o
    método `PautaService.pautaComStatuses()` e a consulta `SessaoRepository.findPautaIdsComSessao()`
    foram removidos por serem código sem chamadas; `GET /pautas` retorna apenas id/título/duração

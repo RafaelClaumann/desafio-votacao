@@ -49,7 +49,8 @@ defesa em caso de concorrência: em H2 (dev/teste) via coluna gerada `titulo_nor
 
 `PautaService.savePauta()` → `existsByTituloIgnoreCase()`; persistência via
 `PautaRepositoryAdapter.save()` (que converte violação de integridade em
-`DuplicatedPautaException`); salvaguarda `uk_pauta_titulo_lower` (coluna gerada no H2;
+`DuplicatedPautaException`, preservando a `DataIntegrityViolationException` original como
+causa); salvaguarda `uk_pauta_titulo_lower` (coluna gerada no H2;
 índice funcional no Postgres).
 
 ### R3 — O título da pauta é normalizado e deve ter entre 20 e 150 caracteres
@@ -119,7 +120,8 @@ outra sessão para a mesma pauta. O banco também aplica essa unicidade
 
 `SessaoService.saveSessao()` → `sessaoRepository.existsByIdPauta()` lança
 `DuplicatedSessaoException` (mapeada para 409); `SessaoRepositoryAdapter.save()` converte a
-violação do índice único `uk_sessao_pauta` no `schema.sql` em `DuplicatedSessaoException`.
+violação do índice único `uk_sessao_pauta` no `schema.sql` em `DuplicatedSessaoException`,
+encadeando a `DataIntegrityViolationException` original como causa.
 
 ### R6 — A duração da sessão é definida pela pauta
 
@@ -265,7 +267,8 @@ salvaguarda contra votos simultâneos abusando da verificação em memória.
 
 `VotoService.votar()` (normaliza o CPF para somente dígitos via `formatter.unformat` e consulta
 `votoRepository.existsByIdSessaoAndDocumento()` com a forma canônica); e
-`VotoRepositoryAdapter.save()` traduz violação de integridade em `DuplicatedVoteException`.
+`VotoRepositoryAdapter.save()` traduz violação de integridade em `DuplicatedVoteException`,
+preservando a `DataIntegrityViolationException` original como causa.
 
 ### R11 — O voto só pode ser SIM ou NÃO
 

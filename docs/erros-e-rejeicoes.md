@@ -44,14 +44,19 @@ traduz isso para a API.
 A verificação em `SessaoService.saveSessao()` lança `DuplicatedSessaoException`, mapeada para
 **HTTP 409** com a mensagem "Já existe uma sessão para a pauta: N". Em corrida, o banco
 bloqueia (índice único `uk_sessao_pauta`) e `SessaoRepositoryAdapter` converte a violação de
-integridade na mesma `DuplicatedSessaoException` → igualmente **409**.
+integridade na mesma `DuplicatedSessaoException` → igualmente **409**. As
+`Duplicated*Exception` preservam a `DataIntegrityViolationException` original como **causa**
+(`Throwable cause`), mantendo a mensagem do contrato intacta e o detalhe do banco disponível
+no log para diagnóstico (correlacionado por `correlation_id`).
 
 ### Concorrência ao votar com o mesmo CPF na mesma sessão
 
 A verificação prévia (`existsByIdSessaoAndDocumento`) evita duplicidade na maioria dos casos.
 Se duas requisições simultâneas passarem pela verificação ao mesmo tempo, a restrição única do
 banco captura a duplicidade e o `VotoRepositoryAdapter` a converte em `DuplicatedVoteException`
-→ **HTTP 409**. O mesmo tratamento de integridade existe para o título da pauta.
+→ **HTTP 409**. O mesmo tratamento de integridade existe para o título da pauta. Em todos os
+casos, a exceção de negócio encadeia a `DataIntegrityViolationException` original como causa,
+para rastreio da violação no log (o corpo HTTP permanece genérico e igual em ambas as camadas).
 
 ### Validação externa (fictícia) do CPF ao votar
 
