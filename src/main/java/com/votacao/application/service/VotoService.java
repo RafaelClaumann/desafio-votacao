@@ -39,10 +39,9 @@ public class VotoService {
 
     @Transactional
     public Voto votar(long idSessao, String documento, Voto.Escolha escolhaVoto) {
-        String documentoNormalizado = formatter.unformat(documento);
-
         Sessao sessao = sessaoService.getOpenSessaoById(idSessao);
 
+        String documentoNormalizado = formatter.unformat(documento);
         if (!documentoValidator.isValidDocumento(documentoNormalizado)) {
             throw new InvalidDocumentoException(documento);
         }
@@ -57,9 +56,9 @@ public class VotoService {
     }
 
     public ApuracaoSessao apurarVotosSessao(long idSessao) {
-        sessaoService.getClosedSessaoById(idSessao);
+        Sessao sessao = sessaoService.getClosedSessaoById(idSessao);
         return new ApuracaoSessao(
-                idSessao,
+                sessao.id(),
                 new ResultadoVotacao(
                         votoRepository.countByIdSessaoAndEscolha(idSessao, Voto.Escolha.SIM),
                         votoRepository.countByIdSessaoAndEscolha(idSessao, Voto.Escolha.NAO)
