@@ -27,7 +27,7 @@ public class VotoRepositoryAdapter implements VotoRepository {
             VotoEntity saved = repository.save(entity);
             return mapper.toDomain(saved);
         } catch (DataIntegrityViolationException e) {
-            throw new DuplicatedVoteException(voto.sessao().id(), voto.documento());
+            throw new DuplicatedVoteException(voto.sessao().id(), voto.documento(), e);
         }
     }
 

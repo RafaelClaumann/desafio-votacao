@@ -8,10 +8,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -56,6 +58,7 @@ class PautaRepositoryAdapterITTest {
     @DisplayName("save should reject a title that differs only by case")
     void save_shouldReject_whenTitleDiffersOnlyByCase() {
         String title = "Discuss the new voting rules";
+
         adapter.save(new Pauta(null, title, 10L));
 
         DuplicatedPautaException exception = assertThrows(
@@ -64,6 +67,8 @@ class PautaRepositoryAdapterITTest {
         );
 
         assertEquals("Já existe uma pauta com o título: " + title.toLowerCase(), exception.getMessage());
+        assertNotNull(exception.getCause());
+        assertInstanceOf(DataIntegrityViolationException.class, exception.getCause());
     }
 
 }

@@ -14,10 +14,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -68,6 +70,8 @@ class VotoRepositoryAdapterITTest {
                 "O documento " + documento + " já votou na sessão " + session.id(),
                 exception.getMessage()
         );
+        assertNotNull(exception.getCause());
+        assertInstanceOf(DataIntegrityViolationException.class, exception.getCause());
     }
 
     private Sessao persistSession(String tituloPauta) {

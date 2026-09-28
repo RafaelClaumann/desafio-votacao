@@ -6,4 +6,8 @@ public class DuplicatedPautaException extends RuntimeException {
         super("Já existe uma pauta com o título: " + titulo);
     }
 
+    public DuplicatedPautaException(String titulo, Throwable cause) {
+        super("Já existe uma pauta com o título: " + titulo, cause);
+    }
+
 }

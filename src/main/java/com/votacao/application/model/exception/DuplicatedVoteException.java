@@ -6,4 +6,8 @@ public class DuplicatedVoteException extends RuntimeException {
         super("O documento " + documento + " já votou na sessão " + idSessao);
     }
 
+    public DuplicatedVoteException(Long idSessao, String documento, Throwable cause) {
+        super("O documento " + documento + " já votou na sessão " + idSessao, cause);
+    }
+
 }

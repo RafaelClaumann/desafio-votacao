@@ -135,7 +135,8 @@ teste `SessaoControllerTest.save_shouldReject_whenIdPautaIsMissing`.
 
 **Status: corrigido** — `SessaoService.saveSessao()` agora lança `DuplicatedSessaoException`,
 mapeada para **HTTP 409** pelo `GlobalExceptionHandler` (mesmo padrão de
-`DuplicatedPautaException`/`DuplicatedVoteException`).
+`DuplicatedPautaException`/`DuplicatedVoteException`). As `Duplicated*Exception` encadeiam a
+`DataIntegrityViolationException` original como causa para diagnóstico no log.
 
 **Comportamento anterior**
 
@@ -149,7 +150,8 @@ esperada e previsível (deveria ser 409/400).
 Abrir uma sessão para uma pauta que **já possui sessão** (violação R5) é recusado com
 **HTTP 409 Conflict** e mensagem "Já existe uma sessão para a pauta: N". Nenhuma sessão é
 criada. A violação é capturada na verificação do serviço (sequencial) e também pelo banco
-(índice único), pois `SessaoRepositoryAdapter.save()` traduz `DataIntegrityViolationException`.
+(índice único), pois `SessaoRepositoryAdapter.save()` traduz `DataIntegrityViolationException`
+(detalhe do banco preservado como causa da exceção de negócio).
 
 **Exemplo (comportamento atual)**
 
@@ -174,7 +176,8 @@ testes `SessaoServiceTest.saveSessao_shouldThrowWhenSessionAlreadyExistsForPauta
 
 **Status: corrigido** — `SessaoRepositoryAdapter.save()` agora captura
 `DataIntegrityViolationException` (mesmo padrão de `PautaRepositoryAdapter` e
-`VotoRepositoryAdapter`) e a converte em `DuplicatedSessaoException` → **HTTP 409**.
+`VotoRepositoryAdapter`) e a converte em `DuplicatedSessaoException` → **HTTP 409**, com o
+detalhe original do banco preservado como causa da exceção.
 
 **Comportamento anterior**
 
@@ -216,7 +219,8 @@ verificação da aplicação. O `schema.sql` trocou a constraint case-sensitive
 
 O banco aplica a mesma unicidade da aplicação: dois títulos que diferem apenas pela caixa
 violam o índice `LOWER(titulo)` → `PautaRepositoryAdapter.save()` converte para
-`DuplicatedPautaException` → **HTTP 409**, mesmo em corrida.
+`DuplicatedPautaException` → **HTTP 409**, mesmo em corrida, preservando a
+`DataIntegrityViolationException` original como causa.
 
 **Exemplo (comportamento atual)**
 

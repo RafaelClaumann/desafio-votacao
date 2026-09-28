@@ -29,7 +29,7 @@ public class PautaRepositoryAdapter implements PautaRepository {
             PautaEntity saved = repository.save(mapper.toEntity(pauta));
             return mapper.toDomain(saved);
         } catch (DataIntegrityViolationException e) {
-            throw new DuplicatedPautaException(pauta.titulo());
+            throw new DuplicatedPautaException(pauta.titulo(), e);
         }
     }
 

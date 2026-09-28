@@ -31,7 +31,7 @@ public class SessaoRepositoryAdapter implements SessaoRepository {
             SessaoEntity saved = repository.save(sessaoEntity);
             return mapper.toDomain(saved);
         } catch (DataIntegrityViolationException e) {
-            throw new DuplicatedSessaoException(sessao.pauta().id());
+            throw new DuplicatedSessaoException(sessao.pauta().id(), e);
         }
     }
 
