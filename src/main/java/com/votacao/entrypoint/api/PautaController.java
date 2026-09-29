@@ -24,11 +24,23 @@ public class PautaController {
     private final PautaService service;
     private final PautaMapper mapper;
 
+    /**
+     * Cria o controlador de pautas.
+     *
+     * @param service serviço de pautas
+     * @param mapper conversor de DTOs e entidades
+     */
     public PautaController(PautaService service, PautaMapper mapper) {
         this.service = service;
         this.mapper = mapper;
     }
 
+    /**
+     * Cria uma nova pauta.
+     *
+     * @param requestBody dados da pauta a ser criada
+     * @return resposta com a pauta criada e URI de localização
+     */
     @PostMapping
     public ResponseEntity<PautaResponseDTO> save(@RequestBody @Valid final PautaRequestDTO requestBody) {
         Pauta domain = mapper.toDomain(requestBody);
@@ -43,6 +55,11 @@ public class PautaController {
         return ResponseEntity.created(location).body(mapper.toResponse(saved));
     }
 
+    /**
+     * Lista todas as pautas cadastradas.
+     *
+     * @return lista de pautas
+     */
     @GetMapping
     public ResponseEntity<List<PautaResponseDTO>> fetch() {
         List<Pauta> pautas = service.getPautas();
