@@ -37,14 +37,14 @@ public class SessaoService {
             throw new DuplicatedSessaoException(idPauta);
         }
 
-        LocalDateTime now = sessaoRepository.now();
+        LocalDateTime now = now();
 
         Sessao sessao = Sessao.registrar(pauta, now, now.plusMinutes(pauta.tempoVotacaoMinutos()));
         return sessaoRepository.save(sessao);
     }
 
     public List<SessaoComStatus> getSessoesComStatus() {
-        LocalDateTime now = sessaoRepository.now();
+        LocalDateTime now = now();
         return sessaoRepository.findAll().stream()
                 .map(sessao -> new SessaoComStatus(sessao, sessao.isOpen(now)))
                 .toList();
@@ -54,7 +54,7 @@ public class SessaoService {
         Sessao sessao = sessaoRepository.findById(idSessao)
                 .orElseThrow(() -> new SessaoNotFoundException(idSessao));
 
-        if (!sessao.isOpen(sessaoRepository.now())) {
+        if (!sessao.isOpen(now())) {
             throw new SessaoIsClosedException(idSessao);
         }
 
@@ -66,11 +66,15 @@ public class SessaoService {
         Sessao sessao = sessaoRepository.findById(idSessao)
                 .orElseThrow(() -> new SessaoNotFoundException(idSessao));
 
-        if (sessao.isOpen(sessaoRepository.now())) {
+        if (sessao.isOpen(now())) {
             throw new SessaoIsOpenException(idSessao);
         }
 
         return sessao;
+    }
+
+    protected LocalDateTime now() {
+        return sessaoRepository.now();
     }
 
 }
