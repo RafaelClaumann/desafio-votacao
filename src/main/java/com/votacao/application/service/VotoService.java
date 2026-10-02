@@ -11,6 +11,7 @@ import com.votacao.application.model.exception.DuplicatedVoteException;
 import com.votacao.application.model.exception.InvalidDocumentoException;
 import com.votacao.application.service.query.ApuracaoSessao;
 import com.votacao.application.service.query.VotoPublishData;
+import com.votacao.commons.ApplicationClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -20,8 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class VotoService {
 
     private static final Logger log = LoggerFactory.getLogger(VotoService.class);
-
-
+    
     private final VotoRepository votoRepository;
     private final SessaoService sessaoService;
     private final PublishVotoGateway publishVotoGateway;
@@ -58,7 +58,7 @@ public class VotoService {
         Voto voto = Voto.registrar(sessao, documentoNormalizado, escolhaVoto);
         Voto saved = votoRepository.save(voto);
 
-        VotoPublishData votoPublishData = new VotoPublishData(sessao.pauta(), sessao, saved, sessaoService.now());
+        VotoPublishData votoPublishData = new VotoPublishData(sessao.pauta(), sessao, saved, ApplicationClock.now());
         publishVotoGateway.publishEvent(votoPublishData);
         log.info("Voto registrado - idVoto: {}, idSessao: {}", saved.id(), idSessao);
 
