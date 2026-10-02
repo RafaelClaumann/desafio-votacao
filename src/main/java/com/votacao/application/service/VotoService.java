@@ -10,7 +10,7 @@ import com.votacao.application.model.Voto;
 import com.votacao.application.model.exception.DuplicatedVoteException;
 import com.votacao.application.model.exception.InvalidDocumentoException;
 import com.votacao.application.service.query.ApuracaoSessao;
-import com.votacao.application.service.query.PublishVoto;
+import com.votacao.application.service.query.VotoPublishData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -58,7 +58,8 @@ public class VotoService {
         Voto voto = Voto.registrar(sessao, documentoNormalizado, escolhaVoto);
         Voto saved = votoRepository.save(voto);
 
-        publishMessage(sessao, saved);
+        VotoPublishData votoPublishData = new VotoPublishData(sessao.pauta(), sessao, saved);
+        publishVotoGateway.publishVoto(votoPublishData);
         log.info("Voto registrado - idVoto: {}, idSessao: {}", saved.id(), idSessao);
 
         return saved;
@@ -72,20 +73,6 @@ public class VotoService {
                         votoRepository.countByIdSessaoAndEscolha(idSessao, Voto.Escolha.SIM),
                         votoRepository.countByIdSessaoAndEscolha(idSessao, Voto.Escolha.NAO)
                 )
-        );
-    }
-
-    private void publishMessage(Sessao sessao, Voto voto) {
-        publishVotoGateway.publishVoto(
-                PublishVoto.builder()
-                        .idSessao(sessao.id())
-                        .idPauta(sessao.pauta().id())
-                        .idVoto(voto.id())
-                        .documento(voto.documento())
-                        .tituloPauta(sessao.pauta().titulo())
-                        .escolhaVoto(voto.escolhaVoto().name())
-                        .publishedAt(sessaoService.now())
-                        .build()
         );
     }
 

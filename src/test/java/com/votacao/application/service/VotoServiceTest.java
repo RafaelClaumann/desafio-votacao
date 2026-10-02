@@ -9,7 +9,7 @@ import com.votacao.application.model.Sessao;
 import com.votacao.application.model.Voto;
 import com.votacao.application.model.exception.DuplicatedVoteException;
 import com.votacao.application.model.exception.InvalidDocumentoException;
-import com.votacao.application.service.query.PublishVoto;
+import com.votacao.application.service.query.VotoPublishData;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -80,7 +80,7 @@ class VotoServiceTest {
         verify(votoRepository).save(captor.capture());
         assertEquals("12345678909", captor.getValue().documento());
 
-        verify(publishVotoGateway, times(1)).publishVoto(any(PublishVoto.class));
+        verify(publishVotoGateway, times(1)).publishVoto(any(VotoPublishData.class));
     }
 
     @Test
@@ -107,7 +107,7 @@ class VotoServiceTest {
         assertEquals(ID_SESSAO, result.sessao().id());
         verify(votoRepository).existsByIdSessaoAndDocumento(ID_SESSAO, "12345678909");
         verify(votoRepository).save(any(Voto.class));
-        verify(publishVotoGateway, times(1)).publishVoto(any(PublishVoto.class));
+        verify(publishVotoGateway, times(1)).publishVoto(any(VotoPublishData.class));
     }
 
     @Test
@@ -130,7 +130,7 @@ class VotoServiceTest {
                 exception.getMessage()
         );
         verify(votoRepository, never()).save(any(Voto.class));
-        verify(publishVotoGateway, never()).publishVoto(any(PublishVoto.class));
+        verify(publishVotoGateway, never()).publishVoto(any(VotoPublishData.class));
 
     }
 
@@ -154,7 +154,7 @@ class VotoServiceTest {
         );
         verify(sessaoService).getOpenSessaoById(ID_SESSAO);
         verify(votoRepository, never()).save(any(Voto.class));
-        verify(publishVotoGateway, never()).publishVoto(any(PublishVoto.class));
+        verify(publishVotoGateway, never()).publishVoto(any(VotoPublishData.class));
     }
 
     private Sessao openSessao() {
