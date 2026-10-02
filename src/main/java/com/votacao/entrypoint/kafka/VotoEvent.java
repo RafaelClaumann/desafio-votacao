@@ -9,6 +9,7 @@ public record VotoEvent(
         String expiresAt,
         long idVoto,
         String documento,
-        String escolhaVoto
+        String escolhaVoto,
+        String publishedAt
 ) {
 }
