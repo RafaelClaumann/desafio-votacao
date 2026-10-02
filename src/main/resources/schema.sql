@@ -25,6 +25,8 @@ CREATE TABLE votos (
     sessao_id BIGINT NOT NULL,
     documento VARCHAR(14) NOT NULL,
     escolha_voto VARCHAR(10) NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
     CONSTRAINT fk_voto_sessao FOREIGN KEY (sessao_id) REFERENCES sessoes(id),
     CONSTRAINT uk_voto_sessao_documento UNIQUE (sessao_id, documento)
 );

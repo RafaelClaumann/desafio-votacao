@@ -67,7 +67,8 @@ class VotoServiceTest {
                     1L,
                     argument.sessao(),
                     argument.documento(),
-                    argument.escolhaVoto()
+                    argument.escolhaVoto(),
+                    LocalDateTime.now()
             );
         });
 
@@ -96,7 +97,8 @@ class VotoServiceTest {
                     1L,
                     argument.sessao(),
                     argument.documento(),
-                    argument.escolhaVoto()
+                    argument.escolhaVoto(),
+                    LocalDateTime.now()
             );
         });
 

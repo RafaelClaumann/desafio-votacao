@@ -12,6 +12,7 @@ public record VotoResponseDTO(
         String documento,
         Voto.Escolha escolhaVoto,
         LocalDateTime startedAt,
-        LocalDateTime expiresAt
+        LocalDateTime expiresAt,
+        LocalDateTime createdAt
 ) {
 }
