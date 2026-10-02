@@ -1,6 +1,6 @@
 package com.votacao.entrypoint.kafka;
 
-import com.votacao.application.gateway.PublishVotoGateway;
+import com.votacao.application.gateway.VotoEventGateway;
 import com.votacao.application.service.query.VotoPublishData;
 import com.votacao.entrypoint.mapper.VotoMapper;
 import org.slf4j.Logger;
@@ -12,24 +12,21 @@ import org.springframework.stereotype.Component;
 import java.util.concurrent.CompletableFuture;
 
 @Component
-public class PublishVotoGatewayImpl implements PublishVotoGateway {
+public class VotoEventGatewayImpl implements VotoEventGateway {
 
-    private static final Logger log = LoggerFactory.getLogger(PublishVotoGatewayImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(VotoEventGatewayImpl.class);
     private static final String TOPIC = "voto-topic";
 
     private final KafkaTemplate<String, VotoEvent> kafkaTemplate;
     private final VotoMapper votoMapper;
 
-    public PublishVotoGatewayImpl(
-            KafkaTemplate<String, VotoEvent> kafkaTemplate,
-            VotoMapper votoMapper
-    ) {
+    public VotoEventGatewayImpl(KafkaTemplate<String, VotoEvent> kafkaTemplate, VotoMapper votoMapper) {
         this.kafkaTemplate = kafkaTemplate;
         this.votoMapper = votoMapper;
     }
 
     @Override
-    public void publishEvent(VotoPublishData voto) {
+    public void publish(VotoPublishData voto) {
         VotoEvent event = votoMapper.toEvent(voto);
         CompletableFuture<SendResult<String, VotoEvent>> send = kafkaTemplate.send(TOPIC, String.valueOf(event.idSessao()), event);
 

@@ -2,7 +2,7 @@ package com.votacao.application.service;
 
 import br.com.caelum.stella.format.Formatter;
 import com.votacao.application.gateway.DocumentoValidator;
-import com.votacao.application.gateway.PublishVotoGateway;
+import com.votacao.application.gateway.VotoEventGateway;
 import com.votacao.application.gateway.VotoRepository;
 import com.votacao.application.model.Pauta;
 import com.votacao.application.model.Sessao;
@@ -39,7 +39,7 @@ class VotoServiceTest {
     private SessaoService sessaoService;
 
     @Mock
-    private PublishVotoGateway publishVotoGateway;
+    private VotoEventGateway votoEventGateway;
 
     @Mock
     private DocumentoValidator documentoValidator;
@@ -80,7 +80,7 @@ class VotoServiceTest {
         verify(votoRepository).save(captor.capture());
         assertEquals("12345678909", captor.getValue().documento());
 
-        verify(publishVotoGateway, times(1)).publishEvent(any(VotoPublishData.class));
+        verify(votoEventGateway, times(1)).publish(any(VotoPublishData.class));
     }
 
     @Test
@@ -107,7 +107,7 @@ class VotoServiceTest {
         assertEquals(ID_SESSAO, result.sessao().id());
         verify(votoRepository).existsByIdSessaoAndDocumento(ID_SESSAO, "12345678909");
         verify(votoRepository).save(any(Voto.class));
-        verify(publishVotoGateway, times(1)).publishEvent(any(VotoPublishData.class));
+        verify(votoEventGateway, times(1)).publish(any(VotoPublishData.class));
     }
 
     @Test
@@ -130,7 +130,7 @@ class VotoServiceTest {
                 exception.getMessage()
         );
         verify(votoRepository, never()).save(any(Voto.class));
-        verify(publishVotoGateway, never()).publishEvent(any(VotoPublishData.class));
+        verify(votoEventGateway, never()).publish(any(VotoPublishData.class));
 
     }
 
@@ -154,7 +154,7 @@ class VotoServiceTest {
         );
         verify(sessaoService).getOpenSessaoById(ID_SESSAO);
         verify(votoRepository, never()).save(any(Voto.class));
-        verify(publishVotoGateway, never()).publishEvent(any(VotoPublishData.class));
+        verify(votoEventGateway, never()).publish(any(VotoPublishData.class));
     }
 
     private Sessao openSessao() {
