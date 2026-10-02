@@ -4,6 +4,6 @@ import com.votacao.application.service.query.VotoPublishData;
 
 public interface PublishVotoGateway {
 
-    void publishVoto(VotoPublishData voto);
+    void publishEvent(VotoPublishData voto);
 
 }

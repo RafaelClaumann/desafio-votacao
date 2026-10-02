@@ -29,7 +29,7 @@ public class PublishVotoGatewayImpl implements PublishVotoGateway {
     }
 
     @Override
-    public void publishVoto(VotoPublishData voto) {
+    public void publishEvent(VotoPublishData voto) {
         VotoEvent event = votoMapper.toEvent(voto);
         CompletableFuture<SendResult<String, VotoEvent>> send = kafkaTemplate.send(TOPIC, String.valueOf(event.idSessao()), event);
 

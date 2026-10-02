@@ -59,7 +59,7 @@ public class VotoService {
         Voto saved = votoRepository.save(voto);
 
         VotoPublishData votoPublishData = new VotoPublishData(sessao.pauta(), sessao, saved, sessaoService.now());
-        publishVotoGateway.publishVoto(votoPublishData);
+        publishVotoGateway.publishEvent(votoPublishData);
         log.info("Voto registrado - idVoto: {}, idSessao: {}", saved.id(), idSessao);
 
         return saved;
