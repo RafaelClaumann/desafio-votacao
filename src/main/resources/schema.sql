@@ -7,6 +7,8 @@ CREATE TABLE pautas (
     titulo VARCHAR(150) NOT NULL,
     tempo_votacao_minutos BIGINT NOT NULL DEFAULT 1,
     titulo_normalizado VARCHAR(150) GENERATED ALWAYS AS (LOWER(titulo)),
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
     CONSTRAINT uk_pauta_titulo_lower UNIQUE (titulo_normalizado)
 );
 
