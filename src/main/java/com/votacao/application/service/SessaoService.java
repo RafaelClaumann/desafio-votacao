@@ -73,8 +73,4 @@ public class SessaoService {
         return sessao;
     }
 
-    protected LocalDateTime now() {
-        return sessaoRepository.now();
-    }
-
 }
