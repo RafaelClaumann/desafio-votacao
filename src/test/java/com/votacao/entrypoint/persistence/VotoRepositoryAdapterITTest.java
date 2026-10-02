@@ -78,6 +78,8 @@ class VotoRepositoryAdapterITTest {
         PautaEntity pautaEntity = new PautaEntity();
         pautaEntity.setTitulo(tituloPauta);
         pautaEntity.setTempoVotacaoMinutos(10L);
+        pautaEntity.setCreatedAt(LocalDateTime.now());
+        pautaEntity.setUpdatedAt(LocalDateTime.now());
         entityManager.persist(pautaEntity);
 
         SessaoEntity sessaoEntity = new SessaoEntity();
@@ -86,7 +88,7 @@ class VotoRepositoryAdapterITTest {
         sessaoEntity.setExpiresAt(LocalDateTime.now().plusMinutes(10L));
         entityManager.persist(sessaoEntity);
 
-        Pauta pauta = new Pauta(pautaEntity.getId(), pautaEntity.getTitulo(), pautaEntity.getTempoVotacaoMinutos());
+        Pauta pauta = new Pauta(pautaEntity.getId(), pautaEntity.getTitulo(), pautaEntity.getTempoVotacaoMinutos(), LocalDateTime.now());
         return new Sessao(
                 sessaoEntity.getId(),
                 pauta,

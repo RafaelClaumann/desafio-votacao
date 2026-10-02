@@ -51,7 +51,7 @@ class SessaoRepositoryAdapterITTest {
     @DisplayName("save should reject a second session for the same pauta")
     void save_shouldReject_whenSecondSessionForSamePauta() {
         Long idPauta = persistPauta("[SESS] Sessao única por pauta");
-        Pauta pauta = new Pauta(idPauta, "[SESS] Sessao única por pauta", 10L);
+        Pauta pauta = new Pauta(idPauta, "[SESS] Sessao única por pauta", 10L, null);
 
         adapter.save(Sessao.registrar(pauta, LocalDateTime.now(), LocalDateTime.now().plusMinutes(10L)));
 

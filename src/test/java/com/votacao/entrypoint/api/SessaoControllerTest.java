@@ -52,7 +52,7 @@ class SessaoControllerTest {
     void save_shouldCreateSessao_whenIdPautaIsInformed() throws Exception {
         String titulo = "Reforma estatutária do capítulo quatro";
         LocalDateTime now = LocalDateTime.now();
-        Pauta pauta = new Pauta(1L, titulo, 10L);
+        Pauta pauta = new Pauta(1L, titulo, 10L, now);
         Sessao saved = new Sessao(1L, pauta, now, now.plusMinutes(10));
 
         when(sessaoService.saveSessao(1L)).thenReturn(saved);
@@ -109,7 +109,7 @@ class SessaoControllerTest {
     void fetch_shouldListSessions() throws Exception {
         String titulo = "Reforma estatutária do capítulo quatro";
         LocalDateTime now = LocalDateTime.now();
-        Pauta pauta = new Pauta(1L, titulo, 10L);
+        Pauta pauta = new Pauta(1L, titulo, 10L, now);
         Sessao open = new Sessao(1L, pauta, now.minusMinutes(5), now.plusMinutes(5));
 
         when(sessaoService.getSessoesComStatus())

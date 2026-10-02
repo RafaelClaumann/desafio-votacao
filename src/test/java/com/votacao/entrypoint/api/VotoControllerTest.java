@@ -52,7 +52,7 @@ class VotoControllerTest {
     @DisplayName("Should create the voto with the full response body when the input is valid")
     void save_shouldCreateVoto_whenInputIsValid() throws Exception {
         LocalDateTime now = LocalDateTime.now();
-        Pauta pauta = new Pauta(1L, TITULO, 10L);
+        Pauta pauta = new Pauta(1L, TITULO, 10L, now);
         Sessao sessao = new Sessao(1L, pauta, now, now.plusMinutes(10));
         Voto saved = new Voto(1L, sessao, DOCUMENTO_VALIDO, Voto.Escolha.SIM, now);
 

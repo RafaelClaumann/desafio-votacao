@@ -162,7 +162,7 @@ class VotoServiceTest {
     private Sessao openSessao() {
         return new Sessao(
                 ID_SESSAO,
-                new Pauta(1L, "Reforma estatutária do capítulo quatro", 10L),
+                new Pauta(1L, "Reforma estatutária do capítulo quatro", 10L, LocalDateTime.now()),
                 LocalDateTime.now().minusMinutes(1),
                 LocalDateTime.now().plusMinutes(9)
         );
