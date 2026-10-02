@@ -8,6 +8,7 @@ import com.votacao.application.model.exception.SessaoIsClosedException;
 import com.votacao.application.model.exception.SessaoIsOpenException;
 import com.votacao.application.model.exception.SessaoNotFoundException;
 import com.votacao.application.service.query.SessaoComStatus;
+import com.votacao.commons.ApplicationClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -37,14 +38,13 @@ public class SessaoService {
             throw new DuplicatedSessaoException(idPauta);
         }
 
-        LocalDateTime now = sessaoRepository.now();
-
+        LocalDateTime now = ApplicationClock.now();
         Sessao sessao = Sessao.registrar(pauta, now, now.plusMinutes(pauta.tempoVotacaoMinutos()));
         return sessaoRepository.save(sessao);
     }
 
     public List<SessaoComStatus> getSessoesComStatus() {
-        LocalDateTime now = sessaoRepository.now();
+        LocalDateTime now = ApplicationClock.now();
         return sessaoRepository.findAll().stream()
                 .map(sessao -> new SessaoComStatus(sessao, sessao.isOpen(now)))
                 .toList();
@@ -54,7 +54,7 @@ public class SessaoService {
         Sessao sessao = sessaoRepository.findById(idSessao)
                 .orElseThrow(() -> new SessaoNotFoundException(idSessao));
 
-        if (!sessao.isOpen(sessaoRepository.now())) {
+        if (!sessao.isOpen(ApplicationClock.now())) {
             throw new SessaoIsClosedException(idSessao);
         }
 
@@ -66,7 +66,7 @@ public class SessaoService {
         Sessao sessao = sessaoRepository.findById(idSessao)
                 .orElseThrow(() -> new SessaoNotFoundException(idSessao));
 
-        if (sessao.isOpen(sessaoRepository.now())) {
+        if (sessao.isOpen(ApplicationClock.now())) {
             throw new SessaoIsOpenException(idSessao);
         }
 

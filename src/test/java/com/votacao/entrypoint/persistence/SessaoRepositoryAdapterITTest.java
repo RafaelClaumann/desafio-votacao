@@ -3,6 +3,7 @@ package com.votacao.entrypoint.persistence;
 import com.votacao.application.model.Pauta;
 import com.votacao.application.model.Sessao;
 import com.votacao.application.model.exception.DuplicatedSessaoException;
+import com.votacao.commons.ApplicationClock;
 import com.votacao.entrypoint.mapper.PautaMapperImpl;
 import com.votacao.entrypoint.mapper.SessaoMapperImpl;
 import com.votacao.entrypoint.persistence.entity.PautaEntity;
@@ -23,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DataJpaTest
-@Import({SessaoRepositoryAdapter.class, SessaoMapperImpl.class, PautaMapperImpl.class})
+@Import({SessaoRepositoryAdapter.class, SessaoMapperImpl.class, PautaMapperImpl.class, ApplicationClock.class})
 @DisplayName("SessaoRepositoryAdapter (integration)")
 class SessaoRepositoryAdapterITTest {
 
@@ -31,12 +32,15 @@ class SessaoRepositoryAdapterITTest {
     private SessaoRepositoryAdapter adapter;
 
     @Autowired
+    private ApplicationClock applicationClock;
+
+    @Autowired
     private TestEntityManager entityManager;
 
     @Test
     @DisplayName("now should return the current timestamp from the database clock")
     void now_shouldReturnCurrentDatabaseTimestamp() {
-        LocalDateTime dbNow = adapter.now();
+        LocalDateTime dbNow = ApplicationClock.now();
 
         assertNotNull(dbNow);
         assertTrue(dbNow.isBefore(LocalDateTime.now().plusMinutes(1)));
@@ -47,7 +51,7 @@ class SessaoRepositoryAdapterITTest {
     @DisplayName("save should reject a second session for the same pauta")
     void save_shouldReject_whenSecondSessionForSamePauta() {
         Long idPauta = persistPauta("[SESS] Sessao única por pauta");
-        Pauta pauta = new Pauta(idPauta, "[SESS] Sessao única por pauta", 10L);
+        Pauta pauta = new Pauta(idPauta, "[SESS] Sessao única por pauta", 10L, null);
 
         adapter.save(Sessao.registrar(pauta, LocalDateTime.now(), LocalDateTime.now().plusMinutes(10L)));
 
