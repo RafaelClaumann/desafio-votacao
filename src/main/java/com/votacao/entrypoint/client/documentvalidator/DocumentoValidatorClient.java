@@ -4,7 +4,9 @@ import com.votacao.application.gateway.DocumentoValidator;
 import com.votacao.entrypoint.client.exception.HttpIntegrationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
@@ -18,6 +20,9 @@ public class DocumentoValidatorClient implements DocumentoValidator {
 
     private static final Logger log = LoggerFactory.getLogger(DocumentoValidatorClient.class);
 
+    @Value("${app.documento-validator.is-enabled}")
+    private boolean isValidationEnabled;
+
     private final RestClient restClient;
 
     public DocumentoValidatorClient(RestClient documentoValidatorRestClient) {
@@ -27,15 +32,17 @@ public class DocumentoValidatorClient implements DocumentoValidator {
     @Override
     public boolean isValidDocumento(String documento) {
         try {
-            simularStatusDoServicoExterno();
+            if (isValidationEnabled) {
+                simularStatusDoServicoExterno();
+            }
 
-            ValidatorResponse response = restClient.post()
+            ResponseEntity<ValidatorResponse> response = restClient.post()
                     .uri("/anything")
                     .body(Map.of("documento", documento))
                     .retrieve()
-                    .body(ValidatorResponse.class);
+                    .toEntity(ValidatorResponse.class);
 
-            log.info("Retorno capturado: {}", response);
+            log.info("Response from Documento Validator: status={}, body={}", response.getStatusCode(), response.getBody());
 
         } catch (HttpClientErrorException ex) {
             return false;
