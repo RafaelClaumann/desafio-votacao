@@ -1,6 +1,7 @@
 package com.votacao.application.service;
 
 import com.votacao.application.gateway.SessaoRepository;
+import com.votacao.application.gateway.TimeProvider;
 import com.votacao.application.model.Pauta;
 import com.votacao.application.model.Sessao;
 import com.votacao.application.model.exception.DuplicatedSessaoException;
@@ -9,16 +10,12 @@ import com.votacao.application.model.exception.SessaoIsClosedException;
 import com.votacao.application.model.exception.SessaoIsOpenException;
 import com.votacao.application.model.exception.SessaoNotFoundException;
 import com.votacao.application.service.query.SessaoComStatus;
-import com.votacao.commons.ApplicationClock;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
@@ -32,7 +29,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -44,26 +40,17 @@ class SessaoServiceTest {
     @Mock
     private SessaoRepository sessaoRepository;
 
-    private MockedStatic<ApplicationClock> clock;
-
     @Mock
     private PautaService pautaService;
+
+    @Mock
+    private TimeProvider timeProvider;
 
     @InjectMocks
     private SessaoService sessaoService;
 
     private static final LocalDateTime BASE_DATE_TIME = LocalDateTime.of(2026, 9, 23, 10, 0);
     private static final Pauta PAUTA = new Pauta(2L, "Reforma estatutária do capítulo quatro", 10L);
-
-    @BeforeEach
-    void setup() {
-        clock = mockStatic(ApplicationClock.class);
-    }
-
-    @AfterEach
-    void tearDown() {
-        clock.close();
-    }
 
     @Test
     @DisplayName("saveSessao should create and save a session with the pauta duration")
@@ -74,7 +61,7 @@ class SessaoServiceTest {
 
         when(pautaService.getPautaById(idPauta)).thenReturn(pauta);
         when(sessaoRepository.existsByIdPauta(idPauta)).thenReturn(false);
-        when(ApplicationClock.now()).thenReturn(now);
+        when(timeProvider.now()).thenReturn(now);
         when(sessaoRepository.save(any(Sessao.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Sessao result = sessaoService.saveSessao(idPauta);
@@ -136,7 +123,7 @@ class SessaoServiceTest {
         Sessao sessao = new Sessao(idSessao, PAUTA, BASE_DATE_TIME, BASE_DATE_TIME.plusMinutes(10));
 
         when(sessaoRepository.findById(idSessao)).thenReturn(Optional.of(sessao));
-        when(ApplicationClock.now()).thenReturn(BASE_DATE_TIME);
+        when(timeProvider.now()).thenReturn(BASE_DATE_TIME);
 
         Sessao result = sessaoService.getOpenSessaoById(idSessao);
 
@@ -163,7 +150,7 @@ class SessaoServiceTest {
         Sessao closed = new Sessao(idSessao, PAUTA, BASE_DATE_TIME.minusMinutes(20), BASE_DATE_TIME.minusMinutes(10));
 
         when(sessaoRepository.findById(idSessao)).thenReturn(Optional.of(closed));
-        when(ApplicationClock.now()).thenReturn(BASE_DATE_TIME);
+        when(timeProvider.now()).thenReturn(BASE_DATE_TIME);
 
         SessaoIsClosedException exception = assertThrows(
                 SessaoIsClosedException.class,
@@ -181,7 +168,7 @@ class SessaoServiceTest {
         Sessao closed = new Sessao(idSessao, PAUTA, BASE_DATE_TIME.minusMinutes(20), BASE_DATE_TIME.minusMinutes(10));
 
         when(sessaoRepository.findById(idSessao)).thenReturn(Optional.of(closed));
-        when(ApplicationClock.now()).thenReturn(BASE_DATE_TIME);
+        when(timeProvider.now()).thenReturn(BASE_DATE_TIME);
 
         Sessao result = sessaoService.getClosedSessaoById(idSessao);
 
@@ -196,7 +183,7 @@ class SessaoServiceTest {
         Sessao open = new Sessao(idSessao, PAUTA, BASE_DATE_TIME, BASE_DATE_TIME.plusMinutes(10));
 
         when(sessaoRepository.findById(idSessao)).thenReturn(Optional.of(open));
-        when(ApplicationClock.now()).thenReturn(BASE_DATE_TIME);
+        when(timeProvider.now()).thenReturn(BASE_DATE_TIME);
 
         SessaoIsOpenException exception = assertThrows(
                 SessaoIsOpenException.class,
@@ -231,7 +218,7 @@ class SessaoServiceTest {
         Sessao closed = new Sessao(2L, PAUTA, BASE_DATE_TIME.minusMinutes(20), BASE_DATE_TIME.minusMinutes(10));
 
         when(sessaoRepository.findAll()).thenReturn(List.of(open, closed));
-        when(ApplicationClock.now()).thenReturn(BASE_DATE_TIME);
+        when(timeProvider.now()).thenReturn(BASE_DATE_TIME);
 
         List<SessaoComStatus> result = sessaoService.getSessoesComStatus();
 
