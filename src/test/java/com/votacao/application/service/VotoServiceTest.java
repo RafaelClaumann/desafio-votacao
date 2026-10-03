@@ -2,6 +2,7 @@ package com.votacao.application.service;
 
 import br.com.caelum.stella.format.Formatter;
 import com.votacao.application.gateway.DocumentoValidator;
+import com.votacao.application.gateway.TimeProvider;
 import com.votacao.application.gateway.VotoEventGateway;
 import com.votacao.application.gateway.VotoRepository;
 import com.votacao.application.model.Pauta;
@@ -37,6 +38,9 @@ class VotoServiceTest {
 
     @Mock
     private SessaoService sessaoService;
+
+    @Mock
+    private TimeProvider timeProvider;
 
     @Mock
     private VotoEventGateway votoEventGateway;
@@ -81,6 +85,7 @@ class VotoServiceTest {
         assertEquals("12345678909", captor.getValue().documento());
 
         verify(votoEventGateway, times(1)).publish(any(VotoPublishData.class));
+        verify(timeProvider, times(1)).now();
     }
 
     @Test
@@ -99,6 +104,7 @@ class VotoServiceTest {
                     argument.escolhaVoto()
             );
         });
+        when(timeProvider.now()).thenReturn(LocalDateTime.now());
 
         Voto result = votoService.votar(ID_SESSAO, "12345678909", Voto.Escolha.NAO);
 
@@ -108,6 +114,7 @@ class VotoServiceTest {
         verify(votoRepository).existsByIdSessaoAndDocumento(ID_SESSAO, "12345678909");
         verify(votoRepository).save(any(Voto.class));
         verify(votoEventGateway, times(1)).publish(any(VotoPublishData.class));
+        verify(timeProvider, times(1)).now();
     }
 
     @Test
@@ -131,6 +138,7 @@ class VotoServiceTest {
         );
         verify(votoRepository, never()).save(any(Voto.class));
         verify(votoEventGateway, never()).publish(any(VotoPublishData.class));
+        verify(timeProvider, never()).now();
 
     }
 
@@ -155,6 +163,7 @@ class VotoServiceTest {
         verify(sessaoService).getOpenSessaoById(ID_SESSAO);
         verify(votoRepository, never()).save(any(Voto.class));
         verify(votoEventGateway, never()).publish(any(VotoPublishData.class));
+        verify(timeProvider, never()).now();
     }
 
     private Sessao openSessao() {
