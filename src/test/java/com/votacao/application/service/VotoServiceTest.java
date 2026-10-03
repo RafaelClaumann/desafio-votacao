@@ -11,6 +11,7 @@ import com.votacao.application.model.Voto;
 import com.votacao.application.model.exception.DuplicatedVoteException;
 import com.votacao.application.model.exception.InvalidDocumentoException;
 import com.votacao.application.service.query.VotoPublishData;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -55,16 +56,26 @@ class VotoServiceTest {
     private VotoService votoService;
 
     private static final Long ID_SESSAO = 1L;
+    private static final String DOCUMENTO_NAO_NORMALIZADO = "123.456.789-09";
+    private static final String DOCUMENTO_NORMALIZADO = "12345678909";
+    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 10, 3, 10, 0, 0);
+
+    private static final Pauta PAUTA = new Pauta(1L, "Reforma estatutária do capítulo quatro", 10L);
+    private static final Sessao SESSAO = new Sessao(ID_SESSAO, PAUTA, FIXED_NOW, FIXED_NOW.plusMinutes(9));
+
+    @BeforeEach
+    void setUp() {
+        when(sessaoService.getOpenSessaoById(ID_SESSAO)).thenReturn(SESSAO);
+        when(formatter.unformat(DOCUMENTO_NAO_NORMALIZADO)).thenReturn(DOCUMENTO_NORMALIZADO);
+        when(documentoValidator.isValidDocumento(DOCUMENTO_NORMALIZADO)).thenReturn(true);
+    }
+
 
     @Test
-    @DisplayName("votar should normalize the documento before duplicity validation and saving")
-    void votar_shouldNormalizeDocumento_beforeDuplicityValidationAndSaving() {
-        String documento = "123.456.789-09";
+    @DisplayName("votar should save the vote when documento is valid, the session is open and the documento is new")
+    void votar_shouldSaveVote_whenValidDocumentoSessionIsOpenAndDocumentoIsNew() {
 
-        when(sessaoService.getOpenSessaoById(ID_SESSAO)).thenReturn(openSessao());
-        when(formatter.unformat("123.456.789-09")).thenReturn("12345678909");
-        when(documentoValidator.isValidDocumento("12345678909")).thenReturn(true);
-        when(votoRepository.existsByIdSessaoAndDocumento(ID_SESSAO, "12345678909")).thenReturn(false);
+        when(votoRepository.existsByIdSessaoAndDocumento(ID_SESSAO, DOCUMENTO_NORMALIZADO)).thenReturn(false);
         when(votoRepository.save(any(Voto.class))).thenAnswer(invocation -> {
             Voto argument = invocation.getArgument(0);
             return new Voto(
@@ -74,28 +85,53 @@ class VotoServiceTest {
                     argument.escolhaVoto()
             );
         });
-        when(timeProvider.now()).thenReturn(LocalDateTime.now());
+        when(timeProvider.now()).thenReturn(FIXED_NOW);
 
-        Voto result = votoService.votar(ID_SESSAO, documento, Voto.Escolha.SIM);
+        Voto result = votoService.votar(ID_SESSAO, DOCUMENTO_NAO_NORMALIZADO, Voto.Escolha.NAO);
 
-        assertEquals("12345678909", result.documento());
-        verify(votoRepository).existsByIdSessaoAndDocumento(ID_SESSAO, "12345678909");
+        assertEquals(DOCUMENTO_NORMALIZADO, result.documento());
+        assertEquals(Voto.Escolha.NAO, result.escolhaVoto());
+        assertEquals(ID_SESSAO, result.sessao().id());
+        verify(votoRepository).existsByIdSessaoAndDocumento(ID_SESSAO, DOCUMENTO_NORMALIZADO);
+        verify(votoRepository).save(any(Voto.class));
+        verify(votoEventGateway, times(1)).publish(any(VotoPublishData.class));
+    }
+
+    @Test
+    @DisplayName("votar should normalize the documento before duplicity validation and saving")
+    void votar_shouldNormalizeDocumento_beforeDuplicityValidationAndSaving() {
+
+        when(votoRepository.existsByIdSessaoAndDocumento(ID_SESSAO, DOCUMENTO_NORMALIZADO)).thenReturn(false);
+        when(votoRepository.save(any(Voto.class))).thenAnswer(invocation -> {
+            Voto argument = invocation.getArgument(0);
+            return new Voto(
+                    1L,
+                    argument.sessao(),
+                    argument.documento(),
+                    argument.escolhaVoto()
+            );
+        });
+        when(timeProvider.now()).thenReturn(FIXED_NOW);
+
+        Voto result = votoService.votar(ID_SESSAO, DOCUMENTO_NAO_NORMALIZADO, Voto.Escolha.SIM);
+
+        assertEquals(DOCUMENTO_NORMALIZADO, result.documento());
+        verify(votoRepository).existsByIdSessaoAndDocumento(ID_SESSAO, DOCUMENTO_NORMALIZADO);
 
         ArgumentCaptor<Voto> captor = ArgumentCaptor.forClass(Voto.class);
         verify(votoRepository).save(captor.capture());
-        assertEquals("12345678909", captor.getValue().documento());
+        assertEquals(DOCUMENTO_NORMALIZADO, captor.getValue().documento());
 
         verify(votoEventGateway, times(1)).publish(any(VotoPublishData.class));
         verify(timeProvider, times(1)).now();
     }
 
     @Test
-    @DisplayName("votar should save the vote when documento is valid, the session is open and the documento is new")
-    void votar_shouldSaveVote_whenValidDocumentoSessionIsOpenAndDocumentoIsNew() {
-        when(sessaoService.getOpenSessaoById(ID_SESSAO)).thenReturn(openSessao());
-        when(formatter.unformat("12345678909")).thenReturn("12345678909");
-        when(documentoValidator.isValidDocumento("12345678909")).thenReturn(true);
-        when(votoRepository.existsByIdSessaoAndDocumento(ID_SESSAO, "12345678909")).thenReturn(false);
+    @DisplayName("votar should publish VotoPublishData with correct fields and publishedAt")
+    void votar_shouldPublishVotoPublishData_withCorrectFields() {
+
+        when(votoRepository.existsByIdSessaoAndDocumento(any(Long.class), any(String.class))).thenReturn(false);
+        when(timeProvider.now()).thenReturn(FIXED_NOW);
         when(votoRepository.save(any(Voto.class))).thenAnswer(invocation -> {
             Voto argument = invocation.getArgument(0);
             return new Voto(
@@ -105,32 +141,31 @@ class VotoServiceTest {
                     argument.escolhaVoto()
             );
         });
-        when(timeProvider.now()).thenReturn(LocalDateTime.now());
+        when(timeProvider.now()).thenReturn(FIXED_NOW);
 
-        Voto result = votoService.votar(ID_SESSAO, "12345678909", Voto.Escolha.NAO);
+        votoService.votar(ID_SESSAO, DOCUMENTO_NAO_NORMALIZADO, Voto.Escolha.SIM);
 
-        assertEquals("12345678909", result.documento());
-        assertEquals(Voto.Escolha.NAO, result.escolhaVoto());
-        assertEquals(ID_SESSAO, result.sessao().id());
-        verify(votoRepository).existsByIdSessaoAndDocumento(ID_SESSAO, "12345678909");
-        verify(votoRepository).save(any(Voto.class));
-        verify(votoEventGateway, times(1)).publish(any(VotoPublishData.class));
-        verify(timeProvider, times(1)).now();
+        ArgumentCaptor<VotoPublishData> captor = ArgumentCaptor.forClass(VotoPublishData.class);
+        verify(votoEventGateway).publish(captor.capture());
+
+        VotoPublishData data = captor.getValue();
+        assertEquals(SESSAO.pauta(), data.pauta());
+        assertEquals(SESSAO.id(), data.sessao().id());
+        assertEquals(1L, data.voto().id());
+        assertEquals(DOCUMENTO_NORMALIZADO, data.voto().documento());
+        assertEquals(Voto.Escolha.SIM, data.voto().escolhaVoto());
+        assertEquals(FIXED_NOW, data.publishedAt());
     }
 
     @Test
     @DisplayName("votar should throw DuplicatedVoteException when the documento already voted in the session ignoring formatting")
     void votar_shouldReject_whenDocumentoAlreadyVotedInSessionIgnoringFormatting() {
-        String documento = "123.456.789-09";
 
-        when(sessaoService.getOpenSessaoById(ID_SESSAO)).thenReturn(openSessao());
-        when(formatter.unformat("123.456.789-09")).thenReturn("12345678909");
-        when(documentoValidator.isValidDocumento("12345678909")).thenReturn(true);
-        when(votoRepository.existsByIdSessaoAndDocumento(ID_SESSAO, "12345678909")).thenReturn(true);
+        when(votoRepository.existsByIdSessaoAndDocumento(ID_SESSAO, DOCUMENTO_NORMALIZADO)).thenReturn(true);
 
         DuplicatedVoteException exception = assertThrows(
                 DuplicatedVoteException.class,
-                () -> votoService.votar(ID_SESSAO, documento, Voto.Escolha.SIM)
+                () -> votoService.votar(ID_SESSAO, DOCUMENTO_NAO_NORMALIZADO, Voto.Escolha.SIM)
         );
 
         assertEquals(
@@ -140,40 +175,27 @@ class VotoServiceTest {
         verify(votoRepository, never()).save(any(Voto.class));
         verify(votoEventGateway, never()).publish(any(VotoPublishData.class));
         verify(timeProvider, never()).now();
-
     }
 
     @Test
     @DisplayName("votar should throw InvalidDocumentoException when the documento is invalid")
     void votar_shouldReject_whenDocumentoIsNotValid() {
-        String documento = "123.456.789-09";
 
-        when(sessaoService.getOpenSessaoById(ID_SESSAO)).thenReturn(openSessao());
-        when(formatter.unformat("123.456.789-09")).thenReturn("12345678909");
-        when(documentoValidator.isValidDocumento("12345678909")).thenReturn(false);
+        when(documentoValidator.isValidDocumento(DOCUMENTO_NORMALIZADO)).thenReturn(false);
 
         InvalidDocumentoException exception = assertThrows(
                 InvalidDocumentoException.class,
-                () -> votoService.votar(ID_SESSAO, documento, Voto.Escolha.SIM)
+                () -> votoService.votar(ID_SESSAO, DOCUMENTO_NAO_NORMALIZADO, Voto.Escolha.SIM)
         );
 
         assertEquals(
-                "Documento inválido: " + documento,
+                "Documento inválido: " + DOCUMENTO_NAO_NORMALIZADO,
                 exception.getMessage()
         );
         verify(sessaoService).getOpenSessaoById(ID_SESSAO);
         verify(votoRepository, never()).save(any(Voto.class));
         verify(votoEventGateway, never()).publish(any(VotoPublishData.class));
         verify(timeProvider, never()).now();
-    }
-
-    private Sessao openSessao() {
-        return new Sessao(
-                ID_SESSAO,
-                new Pauta(1L, "Reforma estatutária do capítulo quatro", 10L),
-                LocalDateTime.now().minusMinutes(1),
-                LocalDateTime.now().plusMinutes(9)
-        );
     }
 
 }
