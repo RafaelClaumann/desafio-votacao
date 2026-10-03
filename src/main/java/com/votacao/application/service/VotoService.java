@@ -3,7 +3,7 @@ package com.votacao.application.service;
 import br.com.caelum.stella.format.Formatter;
 import com.votacao.application.gateway.DocumentoValidator;
 import com.votacao.application.gateway.TimeProvider;
-import com.votacao.application.gateway.VotoEventGateway;
+import com.votacao.application.gateway.VotoEventPublishGateway;
 import com.votacao.application.gateway.VotoRepository;
 import com.votacao.application.model.ResultadoVotacao;
 import com.votacao.application.model.Sessao;
@@ -24,7 +24,7 @@ public class VotoService {
 
     private final VotoRepository votoRepository;
     private final SessaoService sessaoService;
-    private final VotoEventGateway votoEventGateway;
+    private final VotoEventPublishGateway votoEventPublishGateway;
     private final TimeProvider timeProvider;
     private final Formatter formatter;
     private final DocumentoValidator documentoValidator;
@@ -32,14 +32,14 @@ public class VotoService {
     public VotoService(
             VotoRepository votoRepository,
             SessaoService sessaoService,
-            VotoEventGateway votoEventGateway,
+            VotoEventPublishGateway votoEventPublishGateway,
             TimeProvider timeProvider,
             Formatter formatter,
             DocumentoValidator documentoValidator
     ) {
         this.votoRepository = votoRepository;
         this.sessaoService = sessaoService;
-        this.votoEventGateway = votoEventGateway;
+        this.votoEventPublishGateway = votoEventPublishGateway;
         this.timeProvider = timeProvider;
         this.formatter = formatter;
         this.documentoValidator = documentoValidator;
@@ -62,7 +62,7 @@ public class VotoService {
         Voto saved = votoRepository.save(voto);
 
         VotoPublishData votoData = new VotoPublishData(sessao.pauta(), sessao, saved, timeProvider.now());
-        votoEventGateway.publish(votoData);
+        votoEventPublishGateway.publish(votoData);
         log.info("Voto registrado - idVoto: {}, idSessao: {}", saved.id(), idSessao);
 
         return saved;

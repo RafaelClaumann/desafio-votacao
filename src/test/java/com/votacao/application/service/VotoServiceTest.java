@@ -3,7 +3,7 @@ package com.votacao.application.service;
 import br.com.caelum.stella.format.Formatter;
 import com.votacao.application.gateway.DocumentoValidator;
 import com.votacao.application.gateway.TimeProvider;
-import com.votacao.application.gateway.VotoEventGateway;
+import com.votacao.application.gateway.VotoEventPublishGateway;
 import com.votacao.application.gateway.VotoRepository;
 import com.votacao.application.model.Pauta;
 import com.votacao.application.model.Sessao;
@@ -44,7 +44,7 @@ class VotoServiceTest {
     private TimeProvider timeProvider;
 
     @Mock
-    private VotoEventGateway votoEventGateway;
+    private VotoEventPublishGateway votoEventPublishGateway;
 
     @Mock
     private DocumentoValidator documentoValidator;
@@ -94,7 +94,7 @@ class VotoServiceTest {
         assertEquals(ID_SESSAO, result.sessao().id());
         verify(votoRepository).existsByIdSessaoAndDocumento(ID_SESSAO, DOCUMENTO_NORMALIZADO);
         verify(votoRepository).save(any(Voto.class));
-        verify(votoEventGateway, times(1)).publish(any(VotoPublishData.class));
+        verify(votoEventPublishGateway, times(1)).publish(any(VotoPublishData.class));
     }
 
     @Test
@@ -122,7 +122,7 @@ class VotoServiceTest {
         verify(votoRepository).save(captor.capture());
         assertEquals(DOCUMENTO_NORMALIZADO, captor.getValue().documento());
 
-        verify(votoEventGateway, times(1)).publish(any(VotoPublishData.class));
+        verify(votoEventPublishGateway, times(1)).publish(any(VotoPublishData.class));
         verify(timeProvider, times(1)).now();
     }
 
@@ -146,7 +146,7 @@ class VotoServiceTest {
         votoService.votar(ID_SESSAO, DOCUMENTO_NAO_NORMALIZADO, Voto.Escolha.SIM);
 
         ArgumentCaptor<VotoPublishData> captor = ArgumentCaptor.forClass(VotoPublishData.class);
-        verify(votoEventGateway).publish(captor.capture());
+        verify(votoEventPublishGateway).publish(captor.capture());
 
         VotoPublishData data = captor.getValue();
         assertEquals(SESSAO.pauta(), data.pauta());
@@ -173,7 +173,7 @@ class VotoServiceTest {
                 exception.getMessage()
         );
         verify(votoRepository, never()).save(any(Voto.class));
-        verify(votoEventGateway, never()).publish(any(VotoPublishData.class));
+        verify(votoEventPublishGateway, never()).publish(any(VotoPublishData.class));
         verify(timeProvider, never()).now();
     }
 
@@ -194,7 +194,7 @@ class VotoServiceTest {
         );
         verify(sessaoService).getOpenSessaoById(ID_SESSAO);
         verify(votoRepository, never()).save(any(Voto.class));
-        verify(votoEventGateway, never()).publish(any(VotoPublishData.class));
+        verify(votoEventPublishGateway, never()).publish(any(VotoPublishData.class));
         verify(timeProvider, never()).now();
     }
 
