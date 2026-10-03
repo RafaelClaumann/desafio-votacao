@@ -74,6 +74,7 @@ class VotoServiceTest {
                     argument.escolhaVoto()
             );
         });
+        when(timeProvider.now()).thenReturn(LocalDateTime.now());
 
         Voto result = votoService.votar(ID_SESSAO, documento, Voto.Escolha.SIM);
 
