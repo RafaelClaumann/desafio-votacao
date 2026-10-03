@@ -8,8 +8,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.concurrent.CompletableFuture;
+
+import static org.springframework.transaction.event.TransactionPhase.AFTER_COMMIT;
 
 @Component
 public class VotoEventGatewayImpl implements VotoEventGateway {
@@ -26,6 +29,7 @@ public class VotoEventGatewayImpl implements VotoEventGateway {
     }
 
     @Override
+    @TransactionalEventListener(phase = AFTER_COMMIT)
     public void publish(VotoPublishData voto) {
         VotoEvent event = votoMapper.toEvent(voto);
         CompletableFuture<SendResult<String, VotoEvent>> send = kafkaTemplate.send(TOPIC, String.valueOf(event.idSessao()), event);
