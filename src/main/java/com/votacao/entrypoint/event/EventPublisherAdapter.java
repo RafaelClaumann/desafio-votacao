@@ -1,4 +1,4 @@
-package com.votacao.entrypoint.kafka;
+package com.votacao.entrypoint.event;
 
 import com.votacao.application.gateway.VotoEventPublishGateway;
 import com.votacao.application.service.query.VotoPublishData;
