@@ -1,6 +1,7 @@
 package com.votacao.application.service;
 
 import com.votacao.application.gateway.SessaoRepository;
+import com.votacao.application.gateway.TimeProvider;
 import com.votacao.application.model.Pauta;
 import com.votacao.application.model.Sessao;
 import com.votacao.application.model.exception.DuplicatedSessaoException;
@@ -8,7 +9,6 @@ import com.votacao.application.model.exception.SessaoIsClosedException;
 import com.votacao.application.model.exception.SessaoIsOpenException;
 import com.votacao.application.model.exception.SessaoNotFoundException;
 import com.votacao.application.service.query.SessaoComStatus;
-import com.votacao.commons.ApplicationClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -24,10 +24,12 @@ public class SessaoService {
 
     private final SessaoRepository sessaoRepository;
     private final PautaService pautaService;
+    private final TimeProvider timeProvider;
 
-    public SessaoService(SessaoRepository sessaoRepository, PautaService pautaService) {
+    public SessaoService(SessaoRepository sessaoRepository, PautaService pautaService, TimeProvider timeProvider) {
         this.sessaoRepository = sessaoRepository;
         this.pautaService = pautaService;
+        this.timeProvider = timeProvider;
     }
 
     @Transactional
@@ -38,13 +40,13 @@ public class SessaoService {
             throw new DuplicatedSessaoException(idPauta);
         }
 
-        LocalDateTime now = ApplicationClock.now();
+        LocalDateTime now = timeProvider.now();
         Sessao sessao = Sessao.registrar(pauta, now, now.plusMinutes(pauta.tempoVotacaoMinutos()));
         return sessaoRepository.save(sessao);
     }
 
     public List<SessaoComStatus> getSessoesComStatus() {
-        LocalDateTime now = ApplicationClock.now();
+        LocalDateTime now = timeProvider.now();
         return sessaoRepository.findAll().stream()
                 .map(sessao -> new SessaoComStatus(sessao, sessao.isOpen(now)))
                 .toList();
@@ -54,7 +56,7 @@ public class SessaoService {
         Sessao sessao = sessaoRepository.findById(idSessao)
                 .orElseThrow(() -> new SessaoNotFoundException(idSessao));
 
-        if (!sessao.isOpen(ApplicationClock.now())) {
+        if (!sessao.isOpen(timeProvider.now())) {
             throw new SessaoIsClosedException(idSessao);
         }
 
@@ -66,7 +68,7 @@ public class SessaoService {
         Sessao sessao = sessaoRepository.findById(idSessao)
                 .orElseThrow(() -> new SessaoNotFoundException(idSessao));
 
-        if (sessao.isOpen(ApplicationClock.now())) {
+        if (sessao.isOpen(timeProvider.now())) {
             throw new SessaoIsOpenException(idSessao);
         }
 
