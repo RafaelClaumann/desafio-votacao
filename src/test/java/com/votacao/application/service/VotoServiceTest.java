@@ -2,12 +2,15 @@ package com.votacao.application.service;
 
 import br.com.caelum.stella.format.Formatter;
 import com.votacao.application.gateway.DocumentoValidator;
+import com.votacao.application.gateway.TimeProvider;
+import com.votacao.application.gateway.VotoEventGateway;
 import com.votacao.application.gateway.VotoRepository;
 import com.votacao.application.model.Pauta;
 import com.votacao.application.model.Sessao;
 import com.votacao.application.model.Voto;
 import com.votacao.application.model.exception.DuplicatedVoteException;
 import com.votacao.application.model.exception.InvalidDocumentoException;
+import com.votacao.application.service.query.VotoPublishData;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +27,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("VotoService")
@@ -34,6 +38,12 @@ class VotoServiceTest {
 
     @Mock
     private SessaoService sessaoService;
+
+    @Mock
+    private TimeProvider timeProvider;
+
+    @Mock
+    private VotoEventGateway votoEventGateway;
 
     @Mock
     private DocumentoValidator documentoValidator;
@@ -55,7 +65,16 @@ class VotoServiceTest {
         when(formatter.unformat("123.456.789-09")).thenReturn("12345678909");
         when(documentoValidator.isValidDocumento("12345678909")).thenReturn(true);
         when(votoRepository.existsByIdSessaoAndDocumento(ID_SESSAO, "12345678909")).thenReturn(false);
-        when(votoRepository.save(any(Voto.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(votoRepository.save(any(Voto.class))).thenAnswer(invocation -> {
+            Voto argument = invocation.getArgument(0);
+            return new Voto(
+                    1L,
+                    argument.sessao(),
+                    argument.documento(),
+                    argument.escolhaVoto()
+            );
+        });
+        when(timeProvider.now()).thenReturn(LocalDateTime.now());
 
         Voto result = votoService.votar(ID_SESSAO, documento, Voto.Escolha.SIM);
 
@@ -65,6 +84,9 @@ class VotoServiceTest {
         ArgumentCaptor<Voto> captor = ArgumentCaptor.forClass(Voto.class);
         verify(votoRepository).save(captor.capture());
         assertEquals("12345678909", captor.getValue().documento());
+
+        verify(votoEventGateway, times(1)).publish(any(VotoPublishData.class));
+        verify(timeProvider, times(1)).now();
     }
 
     @Test
@@ -74,7 +96,16 @@ class VotoServiceTest {
         when(formatter.unformat("12345678909")).thenReturn("12345678909");
         when(documentoValidator.isValidDocumento("12345678909")).thenReturn(true);
         when(votoRepository.existsByIdSessaoAndDocumento(ID_SESSAO, "12345678909")).thenReturn(false);
-        when(votoRepository.save(any(Voto.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(votoRepository.save(any(Voto.class))).thenAnswer(invocation -> {
+            Voto argument = invocation.getArgument(0);
+            return new Voto(
+                    1L,
+                    argument.sessao(),
+                    argument.documento(),
+                    argument.escolhaVoto()
+            );
+        });
+        when(timeProvider.now()).thenReturn(LocalDateTime.now());
 
         Voto result = votoService.votar(ID_SESSAO, "12345678909", Voto.Escolha.NAO);
 
@@ -83,6 +114,8 @@ class VotoServiceTest {
         assertEquals(ID_SESSAO, result.sessao().id());
         verify(votoRepository).existsByIdSessaoAndDocumento(ID_SESSAO, "12345678909");
         verify(votoRepository).save(any(Voto.class));
+        verify(votoEventGateway, times(1)).publish(any(VotoPublishData.class));
+        verify(timeProvider, times(1)).now();
     }
 
     @Test
@@ -105,6 +138,9 @@ class VotoServiceTest {
                 exception.getMessage()
         );
         verify(votoRepository, never()).save(any(Voto.class));
+        verify(votoEventGateway, never()).publish(any(VotoPublishData.class));
+        verify(timeProvider, never()).now();
+
     }
 
     @Test
@@ -127,6 +163,8 @@ class VotoServiceTest {
         );
         verify(sessaoService).getOpenSessaoById(ID_SESSAO);
         verify(votoRepository, never()).save(any(Voto.class));
+        verify(votoEventGateway, never()).publish(any(VotoPublishData.class));
+        verify(timeProvider, never()).now();
     }
 
     private Sessao openSessao() {

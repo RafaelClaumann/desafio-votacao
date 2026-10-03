@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DataJpaTest
-@Import({SessaoRepositoryAdapter.class, SessaoMapperImpl.class, PautaMapperImpl.class})
+@Import({SessaoRepositoryAdapter.class, SessaoMapperImpl.class, PautaMapperImpl.class, JpaTimeProvider.class})
 @DisplayName("SessaoRepositoryAdapter (integration)")
 class SessaoRepositoryAdapterITTest {
 
@@ -31,12 +31,15 @@ class SessaoRepositoryAdapterITTest {
     private SessaoRepositoryAdapter adapter;
 
     @Autowired
+    private JpaTimeProvider timeProvider;
+
+    @Autowired
     private TestEntityManager entityManager;
 
     @Test
     @DisplayName("now should return the current timestamp from the database clock")
     void now_shouldReturnCurrentDatabaseTimestamp() {
-        LocalDateTime dbNow = adapter.now();
+        LocalDateTime dbNow = timeProvider.now();
 
         assertNotNull(dbNow);
         assertTrue(dbNow.isBefore(LocalDateTime.now().plusMinutes(1)));
