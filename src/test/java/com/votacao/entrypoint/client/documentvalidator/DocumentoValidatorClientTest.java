@@ -9,6 +9,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
@@ -37,6 +38,7 @@ class DocumentoValidatorClientTest {
         RestClient.Builder builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
         client = new DocumentoValidatorClient(builder.baseUrl("https://httpbin.org").build());
+        ReflectionTestUtils.setField(client, "isValidationEnabled", true);
     }
 
     @ParameterizedTest(name = "status {0} should make the documento {1}")

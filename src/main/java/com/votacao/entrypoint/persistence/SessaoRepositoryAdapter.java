@@ -9,7 +9,6 @@ import com.votacao.entrypoint.persistence.jpa.SpringDataSessaoRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -48,11 +47,6 @@ public class SessaoRepositoryAdapter implements SessaoRepository {
     @Override
     public Optional<Sessao> findById(long idSessao) {
         return repository.findById(idSessao).map(mapper::toDomain);
-    }
-
-    @Override
-    public LocalDateTime now() {
-        return repository.now();
     }
 
 }
