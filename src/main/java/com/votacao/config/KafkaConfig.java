@@ -1,5 +1,6 @@
 package com.votacao.config;
 
+import com.votacao.entrypoint.kafka.KafkaProducerInterceptor;
 import com.votacao.entrypoint.kafka.VotoEvent;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.boot.kafka.autoconfigure.KafkaProperties;
@@ -13,9 +14,13 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.util.Map;
 
-
 @Configuration
 public class KafkaConfig {
+
+    @Bean
+    public KafkaProducerInterceptor kafkaProducerInterceptor() {
+        return new KafkaProducerInterceptor();
+    }
 
     @Bean
     ProducerFactory<String, VotoEvent> producerFactory(KafkaProperties kafkaProperties, JsonMapper jsonMapper) {
@@ -29,7 +34,10 @@ public class KafkaConfig {
 
     @Bean
     KafkaTemplate<String, VotoEvent> kafkaTemplate(ProducerFactory<String, VotoEvent> votoProducerFactory) {
-        return new KafkaTemplate<>(votoProducerFactory);
+        KafkaTemplate<String, VotoEvent> stringVotoEventKafkaTemplate = new KafkaTemplate<>(votoProducerFactory);
+        stringVotoEventKafkaTemplate.setProducerInterceptor(kafkaProducerInterceptor());
+
+        return stringVotoEventKafkaTemplate;
     }
 
 }
