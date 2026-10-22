@@ -25,8 +25,11 @@ Todas as falhas tratadas pelo `GlobalExceptionHandler` seguem o mesmo formato:
 - `correlation_id` é o `X-Correlation-Id` recebido ou um UUID gerado pelo `MDCRequestFilter`, que
   também ecoa o valor no header de resposta.
 - Mapeamento transversal: 400 (validação/regra de negócio), 404 (rota inexistente), 405 (método
-  não suportado), 409 (conflito de unicidade), 503 (falha do validador externo), 500 (erro não
-  previsto, com mensagem genérica).
+  não suportado), 409 (conflito de unicidade), 503 (falha do validador externo — só ocorre com
+  `app.documento-validator.is-enabled=true`), 500 (erro não previsto, com mensagem genérica). No
+  `POST /votos`, a etapa de notificação em Kafka **não** gera 500: ela ocorre após o commit e é
+  capturada pela aplicação, que a registra em log com o contexto do voto (ver
+  [PF16](pontos-fracos-e-falhas.md#pf16)).
 
 ---
 
@@ -145,18 +148,36 @@ Registrar a manifestação de um associado em uma sessão aberta.
 | Campo          | Tipo    | Regra                              |
 | -------------- | ------- | ---------------------------------- |
 | `id_sessao`      | inteiro | Obrigatório                        |
-| `documento`      | texto   | Obrigatório, CPF válido (`@CPF`, aceita pontuação); normalizado para somente dígitos; submetido também a um validador externo fictício |
+| `documento`      | texto   | Obrigatório, CPF válido (`@CPF`, aceita pontuação); normalizado para somente dígitos; submetido também a um validador externo fictício **quando a validação externa está habilitada** |
 | `escolha_voto`   | enum    | Obrigatório, `SIM` ou `NAO`        |
 
 **Regras de negócio**
 
 R7/R8 (sessão deve estar aberta) · R9 (CPF válido — formato `@CPF` + validador externo) ·
-R10 (um voto por CPF por sessão) · R11 (escolha SIM ou NÃO).
+R10 (um voto por CPF por sessão) · R11 (escolha SIM ou NÃO) · R14/R15 (notificação do voto em
+Kafka) · R16 (a consulta ao validador externo pode ser desligada).
 
 Fluxo executado: normaliza o documento para somente dígitos; localiza a sessão e exige que esteja
 aberta segundo o `CURRENT_TIMESTAMP` do banco; submete o documento normalizado ao
-`DocumentoValidator`; verifica se já existe voto desse documento na sessão; salva o voto. Formatos
-pontuado e não pontuado do mesmo CPF são tratados como o mesmo documento.
+`DocumentoValidator` (que só consulta o serviço externo quando a validação está habilitada);
+verifica se já existe voto desse documento na sessão; salva o voto; publica a notificação do voto.
+Formatos pontuado e não pontuado do mesmo CPF são tratados como o mesmo documento.
+
+Com `app.documento-validator.is-enabled=false` (**padrão**), o `DocumentoValidator` **não executa
+nenhuma chamada HTTP** ao validador externo: o documento é aceito com base **apenas** no formato
+(`@CPF`) e a indisponibilidade de rede **não** afeta esta operação. Com
+`app.documento-validator.is-enabled=true`, o validador externo fictício é consultado e pode
+rejeitar o documento (400) ou falhar (503).
+
+**Efeito colateral — notificação em Kafka**
+
+Após a confirmação da gravação do voto, o sistema publica uma notificação no tópico Kafka
+**`voto-topic`** (chave = identificador da sessão), com o payload
+`{id_pauta, titulo, tempo_votacao_minutos, id_sessao, started_at, expires_at, id_voto, documento,
+escolha_voto, published_at}` e o header `X-Correlation-Id` (mesmo id da requisição). O envio é
+**assíncrono** e **best-effort**: se o broker estiver indisponível, a falha é registrada em log e
+**o voto permanece registrado**, com resposta **201** ao associado. Contrato completo em
+[notificacao-voto-kafka.md](notificacao-voto-kafka.md).
 
 **Sucesso**
 
@@ -169,10 +190,18 @@ HTTP 201 — header `Location` e corpo com `id`, `id_sessao`, `id_pauta`, `titul
 - `400` — sessão fechada (o voto não é aceito após a expiração).
 - `400` — CPF inválido, campos ausentes, JSON ilegível ou `escolha_voto` diferente de `SIM`/`NAO`
   (falha de desserialização).
-- `400` — CPF rejeitado pelo validador externo ("Documento inválido: \<cpf\>").
+- `400` — CPF rejeitado pelo validador externo ("Documento inválido: \<cpf\>") — **somente** com
+  `app.documento-validator.is-enabled=true`.
 - `409` — o mesmo CPF **já votou** nesta sessão; a salvaguarda do banco
   `uk_voto_sessao_documento` preserva esse 409 mesmo em corrida.
-- `503` — falha no serviço externo de validação de CPF (status 5xx ou indisponibilidade).
+- `503` — falha no serviço externo de validação de CPF (status 5xx ou indisponibilidade) —
+  **somente** com `app.documento-validator.is-enabled=true`. Com a validação desligada (padrão)
+  nenhuma chamada externa é feita e este erro **não pode ocorrer**.
+- `500` — falha inesperada não mapeada. **A etapa de notificação em Kafka não gera 500**: ela
+  ocorre após o commit e a aplicação captura a exceção (registrando-a em log `ERROR` com `idVoto`,
+  `idSessao` e `correlationId`), de modo que o consumidor sempre recebe **201** mesmo que a
+  notificação tenha sido perdida (ver [PF15](pontos-fracos-e-falhas.md#pf15) e
+  [PF16](pontos-fracos-e-falhas.md#pf16)).
 
 ---
 
@@ -215,3 +244,21 @@ com timeout de conexão e leitura de 500 ms. A URL e os timeouts são configurá
 `app.documento-validator.base-url`, `app.documento-validator.connect-timeout-ms` e
 `app.documento-validator.read-timeout-ms`. O perfil de produção usa PostgreSQL e desabilita o
 console H2.
+
+| Propriedade | Padrão | Efeito sobre o comportamento da API |
+| ----------- | ------ | ------------------------------------- |
+| `app.documento-validator.is-enabled` | `false` | Quando `false` (padrão), o `POST /votos` **não chama** o validador externo: nenhuma requisição HTTP é feita, o documento é aceito com base apenas no formato (`@CPF`) e **nenhum 503** pode ser gerado por esse caminho. Quando `true`, o validador externo fictício é consultado e pode **rejeitar** o documento (400) ou **falhar** (503). |
+| `app.documento-validator.base-url` | `https://httpbin.org` | Base URL do validador fictício de CPF (ignorada quando `is-enabled=false`). |
+| `app.documento-validator.connect-timeout-ms` | `500` | Tempo limite de conexão com o validador. |
+| `app.documento-validator.read-timeout-ms` | `500` | Tempo limite de leitura da resposta do validador. |
+| `spring.kafka.bootstrap-servers` | `localhost:9092` (`${KAFKA_BROKERS_URLS}` no perfil `prod`) | Broker usado para publicar a notificação de voto. Indisponibilidade **não** impede o registro do voto. |
+| `spring.kafka.producer.acks` | `all` | Confirmação de escrita da notificação em todas as réplicas. |
+| `spring.kafka.producer.properties.enable.idempotence` | `true` | Produção idempotente — evita duplicidade por reenvio interno do produtor. |
+| `spring.kafka.producer.properties.max.block.ms` | `5000` | Tempo máximo (ms) que o produtor bloqueia esperando os metadados do tópico: com o broker inalcançável, a resposta do `POST /votos` é retardada em **até ~5 s** (e não os 60 s do padrão do Kafka). |
+| `spring.kafka.producer.properties.request.timeout.ms` | `10000` | Tempo máximo (ms) de espera por uma resposta do broker. |
+| `spring.kafka.producer.properties.delivery.timeout.ms` | `30000` | Tempo máximo (ms) para entregar a mensagem (deve ser ≥ `request.timeout.ms` + `linger.ms`). |
+
+> O comportamento da API **não** muda quando o Kafka está fora do ar: a notificação é enviada
+> após o commit e qualquer falha nela é capturada pela aplicação e registrada em log `ERROR` com
+> `idVoto`, `idSessao` e `correlationId` — o consumidor recebe **201** e o voto permanece registrado (ver
+> [PF15](pontos-fracos-e-falhas.md#pf15) e [PF16](pontos-fracos-e-falhas.md#pf16)).

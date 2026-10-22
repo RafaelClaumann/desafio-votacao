@@ -6,7 +6,7 @@ traduz isso para a API.
 | HTTP  | Situação de negócio                                                              | Exceção / origem                                    |
 | ----- | -------------------------------------------------------------------------------- | --------------------------------------------------- |
 | 400    | Dados de entrada inválidos (título, duração, sessão/`id_pauta`, CPF, escolha).     | `MethodArgumentNotValidException` (Bean Validation) |
-| 400    | Documento (CPF) rejeitado pelo **validador externo** (R9).                        | `InvalidDocumentoException`                        |
+| 400    | Documento (CPF) rejeitado pelo **validador externo** (R9 — apenas com `is-enabled=true`). | `InvalidDocumentoException`                        |
 | 400    | Corpo da requisição ilegível — ex.: escolha fora de SIM/NAO, JSON malformado.    | `HttpMessageNotReadableException`                 |
 | 400    | Parâmetro de caminho com tipo inválido (ex.: id não numérico).                    | `MethodArgumentTypeMismatchException`              |
 | 400    | A pauta informada para abrir sessão **não existe** (R4).                          | `PautaNotFoundException`                           |
@@ -18,7 +18,7 @@ traduz isso para a API.
 | 409    | Tentativa de criar pauta com **título duplicado** (R2).                          | `DuplicatedPautaException`                         |
 | 409    | Tentativa de abrir a **2ª sessão da mesma pauta** (R5).                          | `DuplicatedSessaoException`                        |
 | 409    | Tentativa de votar com **CPF que já votou na sessão** (R10).                     | `DuplicatedVoteException`                          |
-| 503    | Falha no **validador externo** de CPF (status 5xx ou indisponibilidade de rede). | `HttpIntegrationException`                         |
+| 503    | Falha no **validador externo** de CPF (status 5xx ou indisponibilidade de rede — apenas com `is-enabled=true`). | `HttpIntegrationException`                         |
 | 500    | Erros não previstos.                                                              | `Exception` genérica                               |
 
 ## Interpretação de negócio dos códigos
@@ -33,9 +33,13 @@ traduz isso para a API.
 - **HTTP 500 (Internal Server Error):** erro inesperado do servidor. O corpo é **genérico de
   propósito** (não vaza detalhe interno) e traz o **`correlation_id`** (header `X-Correlation-Id`
   ou UUID gerado pelo `MDCRequestFilter`); todas as linhas de log da requisição são correlacionadas
-  sob o mesmo id, permitindo ao consumidor citá-lo no chamado de suporte.
+  sob o mesmo id, permitindo ao consumidor citá-lo no chamado de suporte. No `POST /votos`, a
+  falha da **notificação em Kafka não gera 500**: ela ocorre após o commit e é capturada pela
+  aplicação, que a registra em log com o contexto do voto (ver
+  [PF16](pontos-fracos-e-falhas.md#pf16)).
 - **HTTP 503 (Service Unavailable):** falha na integração com o validador externo de CPF.
-  Nada é gravado.
+  Nada é gravado. Só pode ocorrer com `app.documento-validator.is-enabled=true` — com a validação
+  desligada (padrão) nenhuma chamada externa é feita.
 
 ## Cenários adicionais
 
@@ -67,6 +71,30 @@ válido; **4xx** → documento rejeitado → `InvalidDocumentoException` → **H
 ("Documento inválido: \<cpf\>"); **5xx** ou indisponibilidade de rede → `HttpIntegrationException`
 → **HTTP 503**. URLs e timeouts (500 ms) vêm de `app.documento-validator.*`.
 A integração é **fictícia** (aleatória), portanto não confirma a titularidade do CPF (PF12).
+
+Com `app.documento-validator.is-enabled=false` (padrão), **nenhuma chamada ao serviço externo é
+feita** — nem a *simulação de status aleatório*, nem a *consulta*. O documento deixa de ser
+rejeitado aleatoriamente e passa a ser aceito sempre que tenha formato válido; como não há
+requisição externa, uma falha de rede ou um status 5xx do validador **não pode mais recusar o voto
+com HTTP 503** — o `POST /votos` funciona sem acesso à internet (ver
+[R16](regras-de-negocio.md#r16--a-consulta-ao-validador-externo-de-cpf-pode-ser-desligada) e
+[PF17](pontos-fracos-e-falhas.md#pf17)).
+
+### Notificação de voto indisponível (Kafka fora do ar)
+
+A notificação de voto é enviada **após** a confirmação da gravação e **fora** da transação.
+Duas situações distintas:
+
+| Situação | Efeito | Resposta ao associado |
+| -------- | ------ | ---------------------- |
+| **Falha assíncrona** no envio (broker indisponível, erro de serialização, timeout de metadados já vencido) | Registrada em log `ERROR` ("Failed to send message: idVoto=…, idSessao=…, correlationId=…"). O **voto permanece registrado** e apurável. | **201** — o sucesso da operação de negócio é o registro do voto. |
+| **Exceção síncrona** durante o envio (por exemplo, tempo limite do produtor aguardando os metadados do broker — ver [PF16](pontos-fracos-e-falhas.md#pf16)) | A exceção é lançada **após o commit** e **capturada pela própria aplicação** (`VotoEventKafkaSender`), que a **registra em log `ERROR` com o contexto do voto** (`idVoto`, `idSessao`, `correlationId`) — sem propagá-la ao chamador. A notificação é perdida, mas **deixando rastro**. | **201** — embora a notificação **não** tenha sido publicada. |
+
+Em ambos os casos o **voto não é desfeito** e o consumidor da API **nunca** recebe um erro por
+falha de notificação: a perda é **silenciosa** para o consumidor (PF15), mas **diagnosticável**
+(PF16 corrigido). O diagnóstico é feito pelo log — o `correlation_id` (mesmo id propagado no
+header `X-Correlation-Id` da mensagem Kafka) é a pista
+para correlacionar a requisição que votou e a tentativa de notificação.
 
 ### Duração da votação inválida (≤ 0 ou acima de 43200 minutos)
 

@@ -2,8 +2,8 @@ package com.votacao.application.gateway;
 
 import com.votacao.application.service.query.VotoPublishData;
 
-public interface PublishVotoGateway {
+public interface VotoEventPublishGateway {
 
-    void publishEvent(VotoPublishData voto);
+    void publish(VotoPublishData votoData);
 
 }

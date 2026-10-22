@@ -17,6 +17,9 @@ um tema/assunto que será deliberado por meio de votação associada. O fluxo ge
    registram **votos** do tipo SIM ou NÃO.
 4. Após o fechamento da sessão, o sistema apura o **resultado**: total de votos SIM,
    total de votos NÃO e o status (sem votos, aprovada, rejeitada ou empate).
+5. Cada voto **aceito e gravado** dispara, após a confirmação da gravação, a publicação de uma
+   **notificação de voto** no tópico Kafka `voto-topic`, para que sistemas externos acompanhem
+   a apuração sem consultar a API.
 
 Os estados da sessão (aberta/fechada) **não são armazenados**: são derivados em tempo de
 execução pela comparação da expiração com o **relógio do banco de dados** (`CURRENT_TIMESTAMP`,
@@ -30,6 +33,7 @@ execução pela comparação da expiração com o **relógio do banco de dados**
 | **Sessão de votação** | Período de tempo em que uma pauta específica pode receber votos. Pertence a exatamente uma pauta.       |
 | **Voto**           | Manifestação de um associado em uma sessão. É do tipo **SIM** ou **NÃO**. O associado é identificado por CPF. |
 | **Resultado da votação** | Apuração dos votos de uma sessão já fechada: total SIM, total NÃO e status (SEM_VOTOS, APROVADA, REJEITADA, EMPATE). |
+| **Notificação de voto** | Aviso publicado no tópico Kafka `voto-topic` após a gravação de um voto, carregando pauta, sessão, voto e o instante da publicação. |
 
 ### Relacionamentos entre conceitos
 
@@ -38,6 +42,8 @@ execução pela comparação da expiração com o **relógio do banco de dados**
 - Um **Voto** pertence a **uma única Sessão**.
 - Uma Sessão pode receber **vários Votos**, mas **no máximo um por CPF**.
 - O **Resultado** é derivado dos votos de uma Sessão.
+- Cada **Voto** gravado gera **uma Notificação de voto** (após o commit); a notificação é
+  derivada do voto e **não** uma condição para que o voto seja aceito.
 
 ## Resumo das Regras de Negócio
 
@@ -51,11 +57,14 @@ execução pela comparação da expiração com o **relógio do banco de dados**
 | R6  | A duração da sessão é definida pela pauta (início = criação; fim = início + duração). |
 | R7  | Uma sessão aceita votos apenas enquanto estiver aberta.                 |
 | R8  | Ao atingir a expiração, a sessão fecha e nunca mais aceita votos.       |
-| R9  | Somente associados com CPF válido podem votar (formato `@CPF` + consulta a um validador externo fictício). |
+| R9  | Somente associados com CPF válido podem votar (formato `@CPF` + consulta a um validador externo fictício, quando habilitada). |
 | R10 | Cada CPF pode votar apenas uma vez por sessão.                          |
 | R11 | O voto só pode ser SIM ou NÃO.                                          |
 | R12 | O resultado só pode ser apurado para uma sessão já fechada.             |
 | R13 | O status do resultado é definido pela maioria: SEM_VOTOS (nenhum voto), SIM > NÃO (APROVADA), SIM < NÃO (REJEITADA), empate com votos (EMPATE). |
+| R14 | Cada voto aceito e gravado gera uma notificação de voto publicada no tópico Kafka `voto-topic` (chave = sessão). A falha da notificação não desfaz o voto. |
+| R15 | A notificação só é enviada **após a confirmação da gravação** do voto; transação revertida não notifica. |
+| R16 | A consulta ao validador externo de CPF pode ser desligada (`app.documento-validator.is-enabled`); desligada, **nenhuma chamada ao serviço externo é feita** — o documento deixa de ser rejeitado aleatoriamente e a integração externa deixa de ser exigida (não há mais 503 em falha). |
 
 ## Estrutura Desta Documentação
 
@@ -67,6 +76,7 @@ execução pela comparação da expiração com o **relógio do banco de dados**
 | [fluxos-de-negocio.md](fluxos-de-negocio.md)     | Principais fluxos de negócio, passo a passo.                    |
 | [api-operacoes.md](api-operacoes.md)             | Operações da API REST e como acionam as regras de negócio.      |
 | [erros-e-rejeicoes.md](erros-e-rejeicoes.md)     | Motivos de rejeição e mapeamento de erros HTTP.                 |
+| [notificacao-voto-kafka.md](notificacao-voto-kafka.md) | Contrato e semântica de entrega da notificação de voto (tópico, payload, headers, configuração). |
 | [traceabilidade.md](traceabilidade.md)           | Mapa regra → implementação, índices do banco e observações do código. |
 | [decisao-relogio-da-sessao.md](decisao-relogio-da-sessao.md) | Decisão técnica: por que a "hora atual" da sessão vem do relógio do banco (contexto, alternativas e trade-offs). |
 
@@ -82,9 +92,21 @@ execução pela comparação da expiração com o **relógio do banco de dados**
   externo fictício** (`DocumentoValidatorClient`, via `https://httpbin.org`), cujo resultado é
   **aleatório** (200/400/404/500) — não confirma a titularidade do CPF (PF12). Status **4xx**
   do serviço recusa o voto (400); **falha** (5xx ou indisponibilidade, com timeout de 500 ms)
-  gera **503**.
+  gera **503**. A **integração externa pode ser desligada** por
+  `app.documento-validator.is-enabled=false` (padrão) — nesse caso **nenhuma requisição ao serviço
+  externo é feita**, de modo que o `POST /votos` funciona sem acesso à internet e a falha de
+  integração **não pode mais gerar 503** (PF17 resolvido; ver
+  [R16](regras-de-negocio.md#r16--a-consulta-ao-validador-externo-de-cpf-pode-ser-desligada)).
 - A duração de votação **é validada como valor positivo** na criação da pauta; valores `0` ou
   negativos são recusados com HTTP 400 (ver R6 em [regras-de-negocio.md](regras-de-negocio.md)).
 - Para **diagnóstico**, toda requisição correlaciona suas linhas de log sob um `correlationId`
   (header `X-Correlation-Id` ou UUID gerado pelo `MDCRequestFilter`). O corpo de erro expõe o id
-  no campo `correlation_id`, permitindo ao consumidor citá-lo em chamados (PF13 resolvido).
+  no campo `correlation_id`, permitindo ao consumidor citá-lo em chamados (PF13 resolvido). O
+  **mesmo** id é propagado como header `X-Correlation-Id` da mensagem Kafka de notificação do
+  voto, correlacionando a requisição que votou e o consumidor do tópico.
+- A **notificação de voto** (R14/R15) é enviada **após o commit** e é **best-effort**: a falha no
+  envio é registrada em log e **não** desfaz o voto — a API responde **201** com o voto gravado.
+  A aplicação captura as exceções dessa etapa e as registra com o contexto do voto (`idVoto`,
+  `idSessao`, `correlationId`), de modo que a perda da notificação é **silenciosa para o
+  consumidor da API**, mas **diagnosticável** pelo log (ver
+  [PF15](pontos-fracos-e-falhas.md#pf15) e [PF16](pontos-fracos-e-falhas.md#pf16)).

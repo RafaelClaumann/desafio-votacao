@@ -321,21 +321,21 @@ sessão cedo; um atrasado deixava aceitando votos além da expiração. O mesmo 
 
 O "agora" do sistema é o `CURRENT_TIMESTAMP` do banco (único, compartilhado por todas as
 instâncias). A regra de negócio "está aberta?" é um **método puro do domínio** —
-`Sessao.isOpen(now)` (`now.isBefore(expiresAt)`) — e o `now` vem sempre do banco
-(`SessaoRepository.now()`). Quem vota/apura consulta a sessão e avalia a regra com esse relógio
-(`SessaoService.getOpenSessaoById`/`getClosedSessaoById`); quem lista sessões calcula o `is_open`
-com um único `now()`. Todas as instâncias veem a mesma borda de expiração, sem espalhar a regra
-em queries SQL.
+`Sessao.isOpen(now)` (`now.isBefore(expiresAt)`) — e o `now` vem sempre do banco, obtido pelo
+gateway `TimeProvider` (implementado por `JpaTimeProvider`). Quem vota/apura consulta a sessão e
+avalia a regra com esse relógio (`SessaoService.getOpenSessaoById`/`getClosedSessaoById`); quem
+lista sessões calcula o `is_open` com um único `now()`. Todas as instâncias veem a mesma borda de
+expiração, sem espalhar a regra em queries SQL.
 
 **Impacto**: originalmente Média — corrigido; a borda de fechamento é única (relógio centralizado
 no banco) e a regra fica central e visível no domínio. Em single-node o comportamento observado
 não muda.
 
-**Evidência**: `Sessao.isOpen(LocalDateTime)` (regra no domínio), `SpringDataSessaoRepository.now`
-(`SELECT CURRENT_TIMESTAMP`), `SessaoRepositoryAdapter` (delegação), `SessaoService`
+**Evidência**: `Sessao.isOpen(LocalDateTime)` (regra no domínio), `TimeProvider` (gateway do
+relógio) e `JpaTimeProvider` (`SELECT CURRENT_TIMESTAMP` em SQL nativo), `SessaoService`
 (`getOpenSessaoById`/`getClosedSessaoById`/`saveSessao`/`getSessoesComStatus`), `SessaoMapper`
 (mapeia `SessaoComStatus`, sem `LocalDateTime.now()`); testes `SessaoServiceTest`
-(com `now()` fixo) e `SessaoRepositoryAdapterITTest` (`now` do banco).
+(com `now()` fixo) e `SessaoRepositoryAdapterITTest` (`now` do banco via `JpaTimeProvider`).
 
 ---
 
@@ -410,20 +410,24 @@ Qualquer pessoa com um CPF bem-formado (inclusive o próprio CPF alheio) vota.
 
 **O que acontece**
 
-O sistema valida o **formato** do CPF (`@CPF`) e também submete o documento a um **validador
+O sistema valida o **formato** do CPF (`@CPF`) e, **quando a validação externa está habilitada**
+(`app.documento-validator.is-enabled=true`), também submete o documento a um **validador
 externo** (`DocumentoValidator` → `DocumentoValidatorClient`). Essa integração, porém, é
 **fictícia**: usa `https://httpbin.org`, que responde 200/400/404 de forma **aleatória**, sem
 consultar nenhuma base real de associados. A "decisão" de validar ou rejeitar o CPF não tem
 relação com a titularidade — na prática o voto continua sendo registrado com base no documento
-autodeclarado, apenas com uma etapa aleatória adicional.
+autodeclarado, apenas com uma etapa aleatória adicional. **No perfil padrão
+(`is-enabled=false`) a consulta externa sequer é executada** (ver [PF17](#pf17)), restando
+apenas a validação de formato.
 
 **Impacto**: Baixa — limitação de escopo da aplicação, não um erro de implementação; deve ser
 lida como regra implícita: "o CPF identifica o eleitor por autodeclaração". A validação externa
 é apenas uma **simulação** da integração e não deve ser tratada como confirmação de titularidade.
 
 **Evidência**: `DocumentoValidatorClient` chama `https://httpbin.org/status/200,400,404,500` e
-`/anything` (resultado aleatório); não existe repositório/endpoint de associados; `VotoDTO` usa
-`@CPF`.
+`/anything` (resultado aleatório) apenas quando habilitada por
+`app.documento-validator.is-enabled=true`; não existe repositório/endpoint de associados;
+`VotoDTO` usa `@CPF`.
 
 ---
 
@@ -519,6 +523,201 @@ fechada" possuem cobertura (`getOpenSessaoById*`).
 
 ---
 
+## PF15 — Notificação de voto pode ser perdida sem que o consumidor da API perceba
+
+**Gatilho**
+
+O broker Kafka está indisponível, o tópico não existe e não pode ser criado, ou a serialização
+falha **no instante** em que a notificação do voto seria enviada.
+
+**O que acontece**
+
+A notificação é enviada **após** o commit da transação do voto e de forma **assíncrona**, sem
+**outbox**, sem **persistência** e sem **retentativa**. Quando o envio falha, o erro é apenas
+registrado em log (`ERROR` — "Failed to send message: …") e o **voto permanece registrado e
+apurável**. O consumidor da API recebe **HTTP 201** — sinal de sucesso — mas o evento nunca
+chegou ao tópico.
+
+**Consequência observada**
+
+O sistema pode ficar **divergente**: o banco registra N votos, enquanto o tópico `voto-topic`
+registra menos de N. Um consumidor externo que reconstrói a apuração a partir das notificações
+terá um resultado **diferente** do resultado apurado pela API (`GET /sessoes/{id}/resultado`),
+que é sempre calculado a partir do banco.
+
+**Impacto**: Média — a apuração oficial (API) não é afetada; a inconsistência atinge apenas os
+consumidores do tópico, e não há mecanismo de reconciliação automática.
+
+**Evidência**: `VotoEventKafkaSender.sendEvent()` (`@TransactionalEventListener(AFTER_COMMIT)`;
+o `whenComplete` do `kafkaTemplate.send(...)` apenas **registra** a falha, sem reagendar, sem
+persistir e sem notificar outro canal); ausência de `outbox` ou tabela de eventos no `schema.sql`.
+
+---
+
+## PF16 — (RESOLVIDO) Falha síncrona na notificação é engolida pelo Spring: a API responde 201 e o evento é perdido
+
+**Status: corrigido** — a falha síncrona do envio **não é mais engolida pelo Spring**: o
+`VotoEventKafkaSender` agora **captura** a exceção e a **registra em log com contexto de negócio**
+(`idVoto`, `idSessao` e `correlationId`), o `KafkaProducerInterceptor` deixou de lançar
+`NullPointerException` quando não há identificador de correlação no MDC e o produtor passou a ter
+**tempo de bloqueio limitado** (`max.block.ms=5000`), de modo que a thread da requisição não fica
+aguardando 60 s os metadados do broker.
+
+**Gatilho**
+
+Uma **exceção síncrona** durante o envio da notificação, por exemplo:
+
+1. O `KafkaProducerInterceptor` lê o identificador de correlação do MDC
+   (`MDC.get(MDC_CORRELATION_ID_KEY)`) e chama `.getBytes(UTF_8)` **sem verificar se o valor
+   existe**. O MDC é preenchido pelo `MDCRequestFilter`, que só atua em requisições HTTP — em
+   qualquer outro contexto de execução (tarefa agendada, consumo de fila, teste de integração
+   direto no serviço) o valor é `null` e o interceptor lança `NullPointerException`.
+2. O produtor lança `TimeoutException` ao aguardar metadados do broker
+   (`max.block.ms`, 60 s por padrão — **não configurado na implementação anterior**) quando o cluster
+   está inalcançável.
+
+**Comportamento anterior**
+
+A publicação ocorre **após o commit** da transação do voto. No Spring Framework 7.x, um listener
+`@TransactionalEventListener(phase = AFTER_COMMIT)` é acionado em
+`TransactionSynchronization.afterCompletion(STATUS_COMMITTED)`, e o Spring envolve essa chamada em
+`TransactionSynchronizationUtils.invokeAfterCompletion`, que **captura a `Throwable` e a registra
+em log** ("TransactionSynchronization.afterCompletion threw exception"). Consequência: a exceção
+**não chega ao chamador** — a API responde **HTTP 201**, o **voto permanece gravado** e apurável, mas
+a **notificação não é publicada**. Além disso:
+
+- `KafkaProducerInterceptor.onSend()` chamava `MDC.get(MDC_CORRELATION_ID_KEY).getBytes(UTF_8)`
+  **sem guarda nula**: fora do ciclo HTTP o interceptor lançava `NullPointerException`,
+  interrompendo o envio antes de a mensagem chegar ao broker.
+- `VotoEventKafkaSender.sendEvent()` **não tratava** a exceção síncrona do `kafkaTemplate.send(...)`:
+  ela subia para o Spring, que a capturava e registrava em log — **sem `idVoto`, `idSessao` e
+  `correlationId`**, ou seja, sem contexto de negócio.
+- O produtor usava o `max.block.ms` **padrão (60 s)**: com o cluster inalcançável, a thread da
+  requisição ficava bloqueada até 60 s aguardando os metadados do broker, alongando a resposta do
+  `POST /votos`.
+
+**Comportamento atual**
+
+- O interceptor é **seguro**: sem `correlationId` no MDC (ou com valor em branco) ele **não anexa**
+  o header e **registra um `WARN`**, sem interromper a publicação.
+- `VotoEventKafkaSender.sendEvent()` envolve o envio em `try/catch (RuntimeException)` e registra um
+  `ERROR` **com contexto de negócio**: `idVoto`, `idSessao` e `correlationId` (capturado do MDC no
+  momento do envio, porque o `whenComplete` assíncrono roda em outra thread, sem MDC). A exceção
+  **não sobe mais** para o `TransactionSynchronizationUtils.invokeAfterCompletion`, e o log do Spring
+  sem contexto deixa de ser o único rastro.
+- O produtor tem **tempo de bloqueio limitado**: `max.block.ms=5000`,
+  `request.timeout.ms=10000` e `delivery.timeout.ms=30000`. Com o broker inalcançável, a thread da
+  requisição é bloqueada por **até ~5 s** (e não 60 s) antes de a falha ser registrada.
+- O **contrato da API não mudou**: o voto já está commitado, portanto a resposta continua
+  **HTTP 201** e o voto permanece registrado e apurável. A diferença é que a perda da notificação
+  agora é **rastreável** (log `ERROR` com identificadores) e **limitada no tempo**.
+
+**Exemplo (comportamento atual)**
+
+```text
+spring.kafka.bootstrap-servers=localhost:19092   (broker inalcançável)
+POST /votos  { "id_sessao": 1, "documento": "12345678909", "escolha_voto": "SIM" }
+→ 201 Created (em ~5 s) — voto registrado e apurável
+→ ERROR c.v.e.kafka.VotoEventKafkaSender - Failed to send message synchronously:
+  idVoto=1, idSessao=1, correlationId=7b9364e2-..., reason=Send failed
+  (causa: org.apache.kafka.common.errors.TimeoutException: Topic voto-topic not present in metadata after 5000 ms.)
+```
+
+**Consequência observada**
+
+A falha continua **invisível para o consumidor da API** — não há 500, não há aviso e não há
+`correlation_id` para reportar, porque o voto foi efetivamente gravado. O que mudou é o
+**diagnóstico**: a perda da notificação agora aparece em log como um `ERROR` **com `idVoto`,
+`idSessao` e `correlationId`**, e o custo de tempo é limitado a **~5 s** por requisição (em vez de
+até 60 s). Este ponto se soma ao **PF15** (perda silenciosa da notificação).
+
+**Impacto**: originalmente Média — corrigido; impacto residual **Baixa** (a notificação continua
+**best-effort**: não há *outbox* nem retentativa, portanto a perda é **diagnosticável**, mas não
+prevista).
+
+**Evidência**: `KafkaProducerInterceptor.onSend()` — guarda de valor nulo/em branco antes de
+`getBytes(UTF_8)`, com `WARN` e sem interromper a publicação;
+`VotoEventKafkaSender.sendEvent()` — `try/catch (RuntimeException)` em torno do
+`kafkaTemplate.send(...)`, com log `ERROR` explícito (`idVoto`, `idSessao`, `correlationId`);
+`application.properties` (`spring.kafka.producer.properties.max.block.ms=5000`,
+`request.timeout.ms=10000`, `delivery.timeout.ms=30000`);
+testes `KafkaProducerInterceptorTest` (header anexado, ausência de `correlationId` e valor em
+branco sem exceção), `VotoEventKafkaSenderTest` (falha síncrona e assíncrona sem propagar a
+exceção, com log contendo o contexto do voto) e `KafkaConfigTest` (os timeouts configurados
+atingem de fato o `ProducerFactory`).
+
+---
+
+## PF17 — (RESOLVIDO) Desligar a validação externa de CPF não remove a dependência do serviço externo
+
+**Status: corrigido** — `DocumentoValidatorClient.isValidDocumento()` agora **retorna
+imediatamente** (`true`) quando `app.documento-validator.is-enabled=false`, **sem executar
+nenhuma chamada HTTP** ao validador externo. A flag também passou a fazer parte de
+`DocumentoValidatorProperties` (`isEnabled`), lida por **injeção de construtor**.
+
+**Gatilho**
+
+A aplicação é configurada com `app.documento-validator.is-enabled=false` (o **padrão**), na
+expectativa de que a integração com o validador de CPF deixou de existir.
+
+**Comportamento anterior**
+
+O flag desliga **apenas** a *simulação de status aleatório*
+(`GET /status/200,400,404,500`). A chamada de consulta (`POST /anything`) **continuava sendo
+executada** em toda votação. Portanto, **indisponibilidade de rede** ou **status 5xx** do
+serviço externo continuavam sendo tratados como **falha de integração** →
+`HttpIntegrationException` → **HTTP 503**, recusando o voto.
+
+**Consequência observada (anterior)**
+
+O sistema continuava dependendo de um serviço externo (fictício, `https://httpbin.org`) mesmo com a
+"validação desligada". Em um ambiente **sem acesso à internet**, o `POST /votos` falhava com
+**503** — o que costuma ser interpretado como "a validação está desligada, então o voto deveria
+passar". O efeito real do flag era apenas o de **não rejeitar o documento aleatoriamente**.
+
+**Comportamento atual**
+
+Com `app.documento-validator.is-enabled=false` (padrão), o `DocumentoValidatorClient` **não faz
+nenhuma requisição** ao serviço externo: nem `GET /status/200,400,404,500`, nem `POST /anything`.
+Nenhuma falha de rede ou status 5xx externo pode, portanto, gerar `HttpIntegrationException` →
+**HTTP 503**. O voto é aceito (HTTP 201) e a **ausência de internet deixa de afetar o
+`POST /votos`** — a validação passa a se apoiar **apenas no formato** do CPF (`@CPF`), já
+aplicado na entrada.
+
+Com `app.documento-validator.is-enabled=true`, o comportamento permanece **inalterado**: o
+validador externo fictício é consultado e pode **rejeitar** o documento (→ 400) ou simular
+**falha de integração** (→ 503).
+
+**Exemplo (comportamento atual)**
+
+```text
+app.documento-validator.is-enabled=false  (padrão)
+POST /votos  { "id_sessao": 1, "documento": "52998224725", "escolha_voto": "SIM" }
+→ 201 Created — voto registrado (sem chamada ao validador externo)
+
+app.documento-validator.is-enabled=true
+POST /votos  { "id_sessao": 1, "documento": "52998224725", "escolha_voto": "SIM" }
+→ 201 Created / 400 Bad Request / 503 Service Unavailable
+   (conforme a resposta aleatória do validador externo fictício)
+```
+
+**Impacto**: originalmente Média — corrigido; sem impacto residual (a configuração agora corresponde
+ao efeito anunciado pela nomenclatura e a dependência de rede só existe quando a integração está
+explicitamente habilitada).
+
+**Evidência**: `DocumentoValidatorClient.isValidDocumento()` — guarda de retorno antecipado
+`if (!isValidationEnabled) { return true; }` antes de qualquer chamada ao `RestClient`;
+`DocumentoValidatorProperties.isEnabled()` (faz parte do record de `app.documento-validator.*`);
+`DocumentoValidatorClient` — injeção de construtor da flag (sem `@Value`);
+`application.properties` (`app.documento-validator.is-enabled=false`);
+testes `DocumentoValidatorClientTest.isValidDocumento_shouldAcceptWithoutCallingExternalService_whenValidationIsDisabled`
+e `DocumentoValidatorClientTest.isValidDocumento_shouldNotThrowHttpIntegrationException_whenValidationIsDisabledAndServiceIsUnreachable`
+(servidor de mock sem nenhuma expectativa: qualquer requisição faria o teste falhar);
+teste `DocumentoValidatorPropertiesTest.shouldBindIsEnabledToTrue_whenPropertyIsEnabled` (binding
+de `app.documento-validator.is-enabled` → `isEnabled`).
+
+---
+
 ## Resumo
 
 | # | Ponto fraco / modo de falha                 | Gatilho                          | Consequência observada                     | Impacto |
@@ -537,11 +736,29 @@ fechada" possuem cobertura (`getOpenSessaoById*`).
 | 12 | CPF autodeclarado (sem verificação)         | votação                          | Validação externa **fictícia** (httpbin, aleatória 200/400/404/500) — sem confirmação de titularidade | Baixa   |
 | 13 | Erros 500 genéricos / mensagens mistas      | exceções não mapeadas            | **Corrigido** — mensagens PT-BR; 404/405/400 mapeados; `correlation_id` exposto no corpo de erro | Corrigida |
 | 14 | Testes desatualizados                       | evolução de código               | **Corrigido** — `SessaoServiceTest` alinhado    | Corrigida |
+| 15 | Notificação de voto pode ser perdida        | Kafka indisponível no envio      | Voto fica registrado; notificação só existe no log (sem retentativa/outbox) — consumidores do tópico podem divergir da apuração | Média |
+| 16 | Exceção na notificação é engolida pelo Spring | MDC sem `correlationId` ou broker inalcançável | **Corrigido** — a falha síncrona é capturada e logada com `idVoto`/`idSessao`/`correlationId`; o produtor bloqueia no máximo ~5 s | Corrigida |
+| 17 | "Validação desligada" mantém a dependência externa | ambiente sem internet | **Corrigido** — com `is-enabled=false` nenhuma chamada ao validador externo é feita (sem 503) | Corrigida |
 
-**Recomendação de prioridade:** PF1 a PF11, PF13 e PF14 estão corrigidos. PF12 recebeu uma
+**Recomendação de prioridade:** PF1 a PF11, PF13, PF14, PF16 e PF17 estão corrigidos. PF12 recebeu uma
 **validação externa fictícia** (aleatória, via httpbin) que não confirma titularidade — segue em
 aberto se o objetivo for autenticidade real do associado. Com o PF13, a `HttpIntegrationException`
 tem mapeamento próprio (503), as mensagens estão padronizadas em PT-BR, rotas inexistentes (404),
 métodos não suportados (405) e parâmetros de caminho com tipo inválido (400) têm respostas
 dedicadas, e o **`correlation_id`** é exposto no corpo de erro (vindo do MDC/`MDCRequestFilter`)
 para o consumidor citá-lo em chamados.
+
+Com a notificação de voto em Kafka, três pontos novos merecem atenção (PF15, PF16, PF17): a
+notificação é **best-effort** e pode ser **perdida** sem aviso ao consumidor da API (PF15); uma
+exceção **síncrona** no envio era **capturada pelo próprio Spring** e registrada apenas em log —
+a API continua respondendo **201**, de modo que a perda era **silenciosa** (PF16); e o flag
+`app.documento-validator.is-enabled` **não eliminava** a dependência do validador externo — apenas a
+rejeição aleatória (PF17). **PF17 foi corrigido**: com `is-enabled=false` (padrão) o
+`DocumentoValidatorClient` não executa nenhuma chamada ao serviço externo, de modo que o
+`POST /votos` funciona sem acesso à rede e sem risco de **503**. **PF16 também foi corrigido**: a
+falha síncrona do envio passou a ser **tratada pela aplicação** (log `ERROR` com `idVoto`,
+`idSessao` e `correlationId`), o interceptor deixou de lançar `NullPointerException` quando não há
+identificador de correlação no MDC e o produtor ficou com **tempo de bloqueio limitado**
+(`max.block.ms=5000`), de modo que a thread da requisição não fica mais presa por 60 s. **PF15
+permanece aberto**: a notificação continua sem *outbox*, sem retentativa e sem sinalização ao
+consumidor da API — a perda é diagnosticável, mas não evitada.

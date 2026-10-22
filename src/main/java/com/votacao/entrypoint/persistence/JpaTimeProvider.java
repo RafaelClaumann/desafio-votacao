@@ -1,5 +1,6 @@
-package com.votacao.commons;
+package com.votacao.entrypoint.persistence;
 
+import com.votacao.application.gateway.TimeProvider;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import org.springframework.stereotype.Component;
@@ -7,15 +8,16 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 
 @Component
-public class ApplicationClock {
+public class JpaTimeProvider implements TimeProvider {
 
-    private static EntityManagerFactory factory;
+    private final EntityManagerFactory factory;
 
-    public ApplicationClock(EntityManagerFactory factory) {
-        ApplicationClock.factory = factory;
+    public JpaTimeProvider(EntityManagerFactory factory) {
+        this.factory = factory;
     }
 
-    public static LocalDateTime now() {
+    @Override
+    public LocalDateTime now() {
         try (EntityManager entityManager = factory.createEntityManager()) {
             return (LocalDateTime) entityManager
                     .createNativeQuery("SELECT CURRENT_TIMESTAMP", LocalDateTime.class)
