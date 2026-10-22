@@ -3,6 +3,9 @@
 API REST para gerenciar **pautas de votação** de uma assembleia: criar pautas, abrir sessões
 de votação, registrar votos (SIM/NÃO) e apurar resultados após o fechamento da sessão.
 
+Cada voto registrado é também publicado como **notificação** no tópico Kafka `voto-topic`,
+para que outros sistemas acompanhem a apuração.
+
 > Documentação de negócio e detalhes das regras: ver pasta [`docs/`](docs/).
 
 ## Stack e Requisitos
@@ -11,7 +14,9 @@ de votação, registrar votos (SIM/NÃO) e apurar resultados após o fechamento 
 - **Maven** (o projeto inclui o wrapper `./mvnw`)
 - **Banco em memória (H2)** — os dados são perdidos ao encerrar a aplicação
 - **PostgreSQL** no perfil de produção (`prod`), com integração fictícia de validação de CPF via
-  `https://httpbin.org`
+  `https://httpbin.org` (desligada por padrão — ver [Configuração](#configuração))
+- **Apache Kafka** — notificação de voto (opcional para o desenvolvimento local: sem broker, o
+  voto **continua sendo registrado** e apenas o log de erro da notificação é registrado)
 
 ## Como executar
 
@@ -28,11 +33,28 @@ Executar os testes:
 ./mvnw test
 ```
 
+### Ambiente local com Docker
+
+```bash
+docker compose -f .docker/compose.yaml up -d
+```
+
+Serviços disponíveis: PostgreSQL (`5432`), pgweb (`8084`), Redis (`6379`), Redis Commander
+(`8085`), **Kafka (`9092`)** e **Kafka UI (`http://localhost:8086`)** — a UI lista as mensagens
+do tópico `voto-topic`.
+
+Variáveis de ambiente (`.env`):
+
+| Variável | Uso |
+| -------- | --- |
+| `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD` | Conexão com o PostgreSQL (perfil `prod`) |
+| `KAFKA_BROKERS_URLS` | Endereço do broker Kafka (perfil `prod`); padrão `localhost:9092` |
+
 ## Convenções
 
 - **Formato dos dados:** JSON em `snake_case`.
-- **Identificação do eleitor:** CPF (obrigatório; formato validado — `@CPF` — e submetido a um
-  validador externo fictício antes de votar).
+- **Identificação do eleitor:** CPF (obrigatório; formato validado — `@CPF` — e, quando a validação
+  externa está habilitada, submetido a um validador externo fictício antes de votar).
 - **Escolha do voto:** somente `SIM` ou `NAO`.
 - **Tempo de votação:** em **minutos**, definido na criação da pauta.
 
@@ -43,6 +65,9 @@ Executar os testes:
    A sessão fica aberta e **fecha sozinha** ao expirar.
 3. **POST /votos** — associados votam SIM/NÃO com CPF enquanto a sessão estiver aberta.
 4. **GET /sessoes/{idSessao}/resultado** — apura e divulga o resultado **após o fechamento** da sessão.
+
+Além disso, todo voto registrado gera uma **notificação** no tópico Kafka `voto-topic`
+(enviada após a confirmação da gravação do voto).
 
 ---
 
@@ -258,13 +283,26 @@ curl -X POST http://localhost:8080/votos \
 - `400` — sessão inexistente.
 - `400` — sessão fechada (o voto não é aceito após a expiração).
 - `400` — CPF inválido, campos ausentes ou `escolha_voto` diferente de `SIM`/`NAO`.
-- `400` — CPF rejeitado pelo validador externo (integração fictícia, resultado aleatório).
+- `400` — CPF rejeitado pelo validador externo (integração fictícia, resultado aleatório — apenas
+  com `app.documento-validator.is-enabled=true`).
 - `409` — o mesmo CPF **já votou** nesta sessão.
-- `503` — falha no serviço externo de validação de CPF (timeout de 500 ms).
+- `503` — falha no serviço externo de validação de CPF (timeout de 500 ms — apenas com
+  `app.documento-validator.is-enabled=true`; com a validação desligada, padrão, nenhuma chamada
+  externa é feita e este erro não pode ocorrer).
 
 > **Atenção:** antes de validar e gravar, o sistema **normaliza o CPF para somente dígitos**
 > (via `CPFFormatter` do Caelum Stella). Os formatos com e sem pontuação são tratados como o
 > **mesmo documento**.
+
+> **Notificação em Kafka:** após a confirmação da gravação, o sistema publica o voto no tópico
+> **`voto-topic`** (chave = id da sessão), com o payload
+> `{id_pauta, titulo, tempo_votacao_minutos, id_sessao, started_at, expires_at, id_voto,
+> documento, escolha_voto, published_at}` e o header `X-Correlation-Id`. O envio é **best-effort**:
+> se o broker estiver indisponível (ou a publicação falhar), a falha fica **apenas no log** (com
+> `idVoto`, `idSessao` e `correlationId`) e o **voto permanece registrado** — a resposta ao cliente
+> continua sendo `201`. O tempo de espera do produtor é limitado (`max.block.ms=5000`), portanto a
+> resposta não fica presa por 60 s quando o broker está fora do ar. Contrato completo:
+> [`docs/notificacao-voto-kafka.md`](docs/notificacao-voto-kafka.md).
 
 ---
 
@@ -332,8 +370,34 @@ Toda resposta de erro segue o formato:
 - O `MDCRequestFilter` usa o header `X-Correlation-Id` recebido (ou gera um UUID), ecoa o valor no
   header de resposta e o `GlobalExceptionHandler` o inclui como `correlation_id`.
 - Erros de negócio retornam 400/409 (ver descrito em cada operação); 503 para falha da validação
-  externa de documento; falhas não previstas retornam `500` com mensagem genérica e
-  `correlation_id`.
+  externa de documento (somente com a validação externa habilitada); falhas não previstas
+  retornam `500` com mensagem genérica e `correlation_id`.
+
+---
+
+## Configuração
+
+Propriedades relevantes do `src/main/resources/application.properties` (o perfil `prod` sobrescreve
+o banco e o broker):
+
+| Propriedade | Padrão | Efeito |
+| ----------- | ------ | ------ |
+| `app.documento-validator.is-enabled` | `false` | Desligado (padrão): **nenhuma chamada** ao validador externo fictício é feita — o CPF é aceito com base apenas no formato (`@CPF`) e o `POST /votos` funciona sem acesso à internet (sem `503`). Habilitado (`true`): o validador externo é consultado e pode rejeitar o documento (`400`) ou falhar (`503`). |
+| `app.documento-validator.base-url` | `https://httpbin.org` | Base URL do validador fictício de CPF (ignorada quando a validação está desligada). |
+| `app.documento-validator.connect-timeout-ms` | `500` | Tempo limite de conexão com o validador. |
+| `app.documento-validator.read-timeout-ms` | `500` | Tempo limite de leitura da resposta do validador. |
+| `spring.kafka.bootstrap-servers` | `localhost:9092` (`${KAFKA_BROKERS_URLS}` em `prod`) | Broker da notificação de voto. |
+| `spring.kafka.producer.client-id` | `votacao-sdui` | Identificação do produtor. |
+| `spring.kafka.producer.acks` | `all` | Confirmação de escrita em todas as réplicas. |
+| `spring.kafka.producer.properties.enable.idempotence` | `true` | Produção idempotente. |
+| `spring.kafka.producer.properties.max.block.ms` | `5000` | Tempo máximo (ms) que o produtor bloqueia esperando os metadados do tópico. |
+| `spring.kafka.producer.properties.request.timeout.ms` | `10000` | Tempo máximo (ms) de espera por uma resposta do broker. |
+| `spring.kafka.producer.properties.delivery.timeout.ms` | `30000` | Tempo máximo (ms) para entregar a mensagem. |
+
+> O valor efetivo do serializador é o `JacksonJsonSerializer` definido em `KafkaConfig`; a
+> propriedade `spring.kafka.producer.value-serializer` é apenas **documental**.
+
+---
 
 ## Resumo das regras de negócio
 
@@ -349,6 +413,8 @@ Toda resposta de erro segue o formato:
 | 8 | Voto somente `SIM` ou `NAO`. |
 | 9 | Resultado apurado **apenas para sessões fechadas**. |
 | 10 | Status: `SEM_VOTOS` / `APROVADA` / `REJEITADA` / `EMPATE` conforme a participação e a maioria simples. |
+| 11 | Cada voto registrado gera uma **notificação** no tópico Kafka `voto-topic`; a falha da notificação **não** desfaz o voto. |
+| 12 | A notificação só é enviada **após a confirmação da gravação** do voto. |
 
 Detalhes completos: [`docs/regras-de-negocio.md`](docs/regras-de-negocio.md).
 

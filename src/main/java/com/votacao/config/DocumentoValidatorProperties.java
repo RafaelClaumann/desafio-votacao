@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record DocumentoValidatorProperties(
         String baseUrl,
         int connectTimeoutMs,
-        int readTimeoutMs
+        int readTimeoutMs,
+        boolean isEnabled
 ) {
 }

@@ -148,7 +148,7 @@ exceda o intervalo representável do `LocalDateTime` ao abrir a sessão (PF2 cor
 **Implementação**
 
 `PautaRequestDTO` (`@Positive` + `@Max` em `tempoVotacaoMinutos`, com `@NotNull`);
-`SessaoService.saveSessao()` = `sessaoRepository.now().plusMinutes(pauta.tempoVotacaoMinutos())`
+`SessaoService.saveSessao()` = `timeProvider.now().plusMinutes(pauta.tempoVotacaoMinutos())`
 (o "agora" vem do `CURRENT_TIMESTAMP` do banco — PF9 resolvido).
 
 ## Votação
@@ -171,7 +171,7 @@ Se a sessão estiver fechada, o voto é recusado (HTTP 400) e **nada é registra
 
 `VotoService.votar()` → `SessaoService.getOpenSessaoById()`, que lança `SessaoIsClosedException`.
 A exceção é regra de negócio do domínio (`Sessao.isOpen(now)`), avaliada com o **relógio do banco
-de dados** (`SessaoRepository.now()` = `CURRENT_TIMESTAMP` — PF9 resolvido).
+de dados** (`TimeProvider.now()` = `CURRENT_TIMESTAMP` — PF9 resolvido).
 
 ### R8 — Ao atingir a expiração, a sessão fecha e nunca mais aceita votos
 
@@ -192,7 +192,7 @@ fechado é terminal. Não existem agentes externos para fechar/reabrir manualmen
 **Implementação**
 
 `Sessao.isOpen(now)` (domínio: `now.isBefore(expiresAt)`), com `now` de
-`SessaoRepository.now()` (`SELECT CURRENT_TIMESTAMP`) — a sessão está aberta somente enquanto,
+`TimeProvider.now()` (`SELECT CURRENT_TIMESTAMP`) — a sessão está aberta somente enquanto,
 pelo relógio do banco, `expiresAt` é estritamente posterior a `CURRENT_TIMESTAMP`. No instante
 exato da expiração a sessão já é considerada fechada. Não existe comparação com
 `LocalDateTime.now()` do servidor (PF9 resolvido).
@@ -208,8 +208,10 @@ Um associado registra um voto informando seu documento.
 O documento é validado em duas camadas antes do voto ser aceito:
 1. **Formato** — deve ser um CPF bem-formado (validação de entrada `@CPF`).
 2. **Situação cadastral** — o documento normalizado é submetido a um **validador externo**
-   (`DocumentoValidator`). Essa integração é **fictícia**: não consulta uma base real de
-   associados e o resultado é aleatório (ver observação abaixo).
+   (`DocumentoValidator`), **apenas quando a validação externa está habilitada**
+   (`app.documento-validator.is-enabled=true`). Essa integração é **fictícia**: não consulta uma
+   base real de associados e o resultado é aleatório (ver observação abaixo). **Com a validação
+   desligada (padrão), apenas a camada de formato é aplicada.**
 
 A consulta externa acontece **depois** de a sessão ser confirmada como existente e aberta
 (`getOpenSessaoById`, primeira validação de negócio em `VotoService.votar()`) e **antes** da
@@ -222,7 +224,9 @@ entrada. Um documento que passe no formato, mas seja **rejeitado pelo validador 
 (status **4xx**), também recusa o voto (HTTP 400) com a mensagem "Documento inválido: \<cpf\>"
 — por meio da exceção `InvalidDocumentoException`. Em caso de **falha do serviço externo**
 (status **5xx** ou indisponibilidade de rede), a operação falha com `HttpIntegrationException`,
-mapeada para **HTTP 503** (Service Unavailable) no `GlobalExceptionHandler`.
+mapeada para **HTTP 503** (Service Unavailable) no `GlobalExceptionHandler`. **Com a validação
+externa desligada, nenhum desses dois desfechos pode ocorrer** — não há chamada externa a falhar
+(ver [R16](#r16--a-consulta-ao-validador-externo-de-cpf-pode-ser-desligada)).
 
 > Observação (validação externa fictícia): `DocumentoValidatorClient` simula o serviço externo
 > com o `https://httpbin.org` — o `GET /status/200,400,404,500` sorteia o status e o determina o
@@ -242,10 +246,12 @@ mapeada para **HTTP 503** (Service Unavailable) no `GlobalExceptionHandler`.
 `VotoDTO` — anotação `@CPF` (Bean Validation do Hibernate Validator); `VotoService.votar()` →
 `DocumentoValidator.isValidDocumento()` (após a sessão estar aberta; lança
 `InvalidDocumentoException` quando falso); `DocumentoValidatorClient` — implementação
-`@Component` do gateway via `RestClient` (URL e timeouts de 500 ms configurados em
-`DocumentoValidatorConfig`/`DocumentoValidatorProperties`, `app.documento-validator.*`);
-`GlobalExceptionHandler` — mapeia `InvalidDocumentoException` (400) e `HttpIntegrationException`
-(503).
+`@Component` do gateway via `RestClient` (URL e timeouts de 500 ms e a flag
+`is-enabled` configurados em `DocumentoValidatorConfig`/`DocumentoValidatorProperties`,
+`app.documento-validator.*`); `GlobalExceptionHandler` — mapeia `InvalidDocumentoException` (400)
+e `HttpIntegrationException` (503).
+
+> **A camada de consulta externa pode ser desligada** — ver [R16](#r16--a-consulta-ao-validador-externo-de-cpf-pode-ser-desligada).
 
 ### R10 — Cada CPF pode votar apenas uma vez por sessão
 
@@ -335,3 +341,112 @@ fechada sem nenhum voto é distinta do empate real (PF10 resolvido).
 
 `ResultadoVotacao.status()` e a contagem via
 `votoRepository.countByIdSessaoAndEscolha()` para cada escolha.
+
+## Notificação do Voto Registrado
+
+### R14 — Cada voto registrado gera uma notificação de voto publicada em Kafka
+
+**Condição**
+
+Um voto é **aceito e gravado** no banco: a sessão está aberta, o documento é aceito e o mesmo
+documento ainda não votou naquela sessão.
+
+**Comportamento**
+
+Ao final do registro do voto, o sistema publica uma **notificação de voto** no tópico Kafka
+**`voto-topic`**, para que consumidores externos acompanhem a apuração. A notificação carrega o
+contexto completo da votação: pauta (id, título, duração), sessão (id, início, expiração), voto
+(id, documento normalizado, escolha) e o instante da publicação (`published_at`, colhido do
+**relógio do banco**). A **chave** da mensagem é o identificador da sessão, de modo que todos os
+votos de uma sessão são publicados na mesma partição e chegam ao consumidor **em ordem**.
+
+**Violação**
+
+Nenhuma violação é possível do ponto de vista do domínio: a notificação é um **efeito colateral
+do registro**, e não uma condição para que o voto seja aceito. Se o envio ao broker falhar, o
+**voto permanece registrado** — a falha da notificação é apenas registrada em log
+(`ERROR` — "Failed to send message: idVoto=…, idSessao=…, correlationId=…") e **não** desfaz nem
+rejeita o voto. Portanto, a ausência da notificação **não** invalida o voto, e a sua presença
+**não** é garantia de que o voto foi aceito.
+
+> A notificação é enviada **após** a confirmação da gravação — ver
+> [R15](#r15--a-notificação-do-voto-só-e-enviada-depois-da-gravação-definitiva-do-voto).
+> O contrato completo do evento (payload, headers, semântica de entrega) está em
+> [notificacao-voto-kafka.md](notificacao-voto-kafka.md).
+
+**Implementação**
+
+`VotoService.votar()` monta o `VotoPublishData` (pauta, sessão, voto gravado e `publishedAt`)
+e o publica através do gateway `VotoEventPublishGateway`; `EventPublisherAdapter` faz a ponte
+para o `ApplicationEventPublisher` do Spring; `VotoEventKafkaSender` (com
+`@TransactionalEventListener(phase = AFTER_COMMIT)`) converte o registro em `VotoEvent`
+(`VotoMapper.toEvent()`) e o envia ao tópico `voto-topic` com a chave `idSessao`.
+
+### R15 — A notificação do voto só é enviada depois da gravação definitiva do voto
+
+**Condição**
+
+O voto foi gravado dentro de uma transação de banco.
+
+**Comportamento**
+
+A notificação é enviada **após o commit** da transação do voto (`TransactionPhase.AFTER_COMMIT`).
+Ou seja: o sistema **garante a ordem "gravar antes de notificar"** — um consumidor da notificação
+nunca recebe a notícia de um voto que ainda não foi confirmado no banco.
+
+**Violação**
+
+Se a transação do voto for **revertida** (por exemplo, por uma violação de unicidade detectada
+pelo banco), **nenhuma notificação é publicada** — o sistema não anuncia votos inexistentes.
+Esta é a razão de o envio não ocorrer dentro da transação: eventos publicados no meio da
+transação poderiam ser enviados para o broker e só depois a gravação falhar, deixando o consumidor
+com a versão invertida da realidade.
+
+> **Consequência operacional:** a notificação ocorre **fora** da transação. Uma exceção
+> **síncrona** lançada durante o envio (por exemplo, o tempo limite do produtor aguardando
+> metadados do broker) **não chega ao chamador**: a aplicação a **captura** e a registra em log
+> `ERROR` **com o contexto do voto** (`idVoto`, `idSessao`, `correlationId`) — a API continua
+> respondendo **HTTP 201**, com o voto **gravado** e a notificação **perdida**, mas **deixando
+> rastro**. O tempo de espera do produtor é **limitado** (`max.block.ms=5000`). Ver
+> [PF16](pontos-fracos-e-falhas.md#pf16)
+> (corrigido).
+
+**Implementação**
+
+`VotoEventKafkaSender.sendEvent()` anotado com `@TransactionalEventListener(phase = AFTER_COMMIT)`;
+o evento de aplicação (`VotoPublishData`) é publicado por `EventPublisherAdapter` dentro da
+transação de `VotoService.votar()`, e o Spring só aciona o listener após o commit bem-sucedido.
+
+### R16 — A consulta ao validador externo de CPF pode ser desligada
+
+**Condição**
+
+A aplicação está configurada com `app.documento-validator.is-enabled` (padrão: `false` no perfil
+default e no perfil `prod`).
+
+**Comportamento**
+
+- **Com a validação ligada (`true`)**: o documento é submetido ao validador externo fictício, que
+  sorteia um status (200/400/404/500) e pode **rejeitar** o documento (→ `InvalidDocumentoException`,
+  HTTP 400) ou simular **falha de integração** (→ `HttpIntegrationException`, HTTP 503).
+- **Com a validação desligada (`false`, padrão)**: **nenhuma chamada ao serviço externo é
+  executada** — nem a *simulação de status aleatório* (`GET /status/200,400,404,500`), nem a
+  *consulta* (`POST /anything`). O documento **não é rejeitado aleatoriamente** e a regra de negócio
+  R9 passa a se apoiar **apenas no formato** do CPF (`@CPF`). O registro do voto segue normalmente.
+
+**Violação**
+
+Com a validação desligada **não há dependência do serviço externo**: como nenhuma requisição é
+feita, **indisponibilidade de rede ou falha 5xx do validador externo não podem recusar o voto com
+HTTP 503** — o `POST /votos` funciona em ambiente sem acesso à internet. O que se desliga é a
+**integração externa** (rejeição aleatória e falha de integração), e não apenas a *rejeição
+aleatória*.
+
+**Implementação**
+
+`DocumentoValidatorClient.isValidDocumento()` — **retorno antecipado** `true` quando
+`isValidationEnabled` é `false`, antes de qualquer chamada ao `RestClient`; com a validação
+habilitada, executa `simularStatusDoServicoExterno()` (`GET /status/200,400,404,500`) e a consulta
+`POST /anything`. A flag é lida por **injeção de construtor** a partir de
+`DocumentoValidatorProperties.isEnabled()` (componente do record de `app.documento-validator.*`) e
+declarada em `application.properties` (`app.documento-validator.is-enabled=false`).

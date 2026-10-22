@@ -9,13 +9,16 @@ Mapa das regras de negócio para as classes e métodos que as implementam.
 | R3 — Normalização e tamanho do título | `Pauta` (constructor faz `titulo.trim()`); `PautaRequestDTO` (`@Size(20–150)`); `titulo VARCHAR(150)` em `schema.sql` |
 | R4 — Sessão exige pauta existente | `SessaoDTO` (`@NotNull idPauta`) + `SessaoController.save()` (`@Valid`); `SessaoService.saveSessao()` → `PautaService.getPautaById()` → `PautaNotFoundException` |
 | R5 — Uma sessão por pauta | `SessaoService.saveSessao()` → `sessaoRepository.existsByIdPauta()` → `DuplicatedSessaoException`; `SessaoRepositoryAdapter.save()` converte a violação do índice único `uk_sessao_pauta(sessoes.id_pauta)` em `schema.sql` (com a violação original como causa) |
-| R6 — Duração definida pela pauta | `PautaRequestDTO` (`@Positive` + `@Max(43200)` em `tempoVotacaoMinutos`); `SessaoService.saveSessao()`: `expiresAt = sessaoRepository.now().plusMinutes(...)` (relógio do banco) |
-| R7/R8 — Votos somente em sessão aberta | `VotoService.votar()` → `SessaoService.getOpenSessaoById()` → `Sessao.isOpen(now)` (`now.isBefore(expiresAt)`) e `SessaoIsClosedException`; `now` de `SessaoRepository.now()` |
-| R9 — CPF válido | `VotoDTO` (anotação `@CPF`) + `VotoService.votar()` (após sessão aberta) → `DocumentoValidator.isValidDocumento()` (validação externa fictícia) → `InvalidDocumentoException` (400) / `HttpIntegrationException` (503). Normalização do CPF via `Formatter` do Caelum Stella (`ThirdPartyConfiguration`) |
+| R6 — Duração definida pela pauta | `PautaRequestDTO` (`@Positive` + `@Max(43200)` em `tempoVotacaoMinutos`); `SessaoService.saveSessao()`: `expiresAt = timeProvider.now().plusMinutes(...)` (relógio do banco) |
+| R7/R8 — Votos somente em sessão aberta | `VotoService.votar()` → `SessaoService.getOpenSessaoById()` → `Sessao.isOpen(now)` (`now.isBefore(expiresAt)`) e `SessaoIsClosedException`; `now` de `TimeProvider.now()` |
+| R9 — CPF válido | `VotoDTO` (anotação `@CPF`) + `VotoService.votar()` (após sessão aberta) → `DocumentoValidator.isValidDocumento()` (validação externa fictícia, apenas com `is-enabled=true`) → `InvalidDocumentoException` (400) / `HttpIntegrationException` (503). Normalização do CPF via `Formatter` do Caelum Stella (`ThirdPartyConfiguration`) |
 | R10 — Um voto por CPF por sessão | `VotoService.votar()` → `VotoRepository.existsByIdSessaoAndDocumento()`; `VotoRepositoryAdapter.save()` → `DuplicatedVoteException` (com a violação original como causa); constraint `uk_voto_sessao_documento(sessao_id, documento)` em `schema.sql` |
 | R11 — Voto apenas SIM/NÃO | Enum `Voto.Escolha { SIM, NAO }`; `HttpMessageNotReadableException` para valores inválidos |
-| R12 — Resultado só para sessão fechada | `VotoService.apurarVotosSessao()` → `SessaoService.getClosedSessaoById()` → `Sessao.isOpen(now)` com `now` de `SessaoRepository.now()` → `SessaoIsOpenException` / `SessaoNotFoundException` |
+| R12 — Resultado só para sessão fechada | `VotoService.apurarVotosSessao()` → `SessaoService.getClosedSessaoById()` → `Sessao.isOpen(now)` com `now` de `TimeProvider.now()` → `SessaoIsOpenException` / `SessaoNotFoundException` |
 | R13 — Status por maioria simples | `ResultadoVotacao.status()`; contagem em `VotoRepository.countByIdSessaoAndEscolha()` |
+| R14 — Notificação de voto publicada em Kafka | `VotoService.votar()` monta o `VotoPublishData` e chama `VotoEventPublishGateway.publish()`; `EventPublisherAdapter` publica o evento de aplicação; `VotoEventKafkaSender.sendEvent()` envia ao tópico `voto-topic` com a chave `idSessao`; payload por `VotoMapper.toEvent()`; falha de envio apenas registrada em log (`ERROR` com `idVoto`, `idSessao` e `correlationId`) |
+| R15 — Notificação só após a gravação definitiva | `@TransactionalEventListener(phase = AFTER_COMMIT)` em `VotoEventKafkaSender.sendEvent()`; evento publicado dentro da transação de `VotoService.votar()` (`@Transactional`) |
+| R16 — Consulta ao validador externo pode ser desligada | `DocumentoValidatorClient.isValidDocumento()` — **retorno antecipado** (`true`) quando `DocumentoValidatorProperties.isEnabled()` é `false` (`app.documento-validator.is-enabled`), **antes** de qualquer chamada ao `RestClient`; com a validação habilitada, executa `simularStatusDoServicoExterno()` (`GET /status/200,400,404,500`) e `POST /anything` |
 
 ## Caminhos de execução (controller → regra)
 
@@ -29,14 +32,21 @@ POST /sessoes
   SessaoController.save()
    → SessaoService.saveSessao()      [R4, R5, R6]
    → PautaService.getPautaById()     [R4]
+   → TimeProvider.now()              [R6 — relógio do banco]
 
 POST /votos
   VotoController.save()
    → VotoService.votar()             [R7/R8, R9, R10]
    → formatter.unformat()            [Caelum Stella — CPF normalizado (PF8)]
    → SessaoService.getOpenSessaoById()  [R7/R8 — Sessao.isOpen(now), now do banco]
-   → DocumentoValidatorClient.isValidDocumento()  [R9 — integração externa fictícia]
+    → DocumentoValidatorClient.isValidDocumento()  [R9/R16 — integração externa fictícia (só com is-enabled=true)]
    → VotoRepositoryAdapter.save()    [R10 — salvaguarda do banco]
+   → VotoEventPublishGateway.publish()  [R14/R15 — evento de aplicação]
+        → EventPublisherAdapter.publish()
+        → (commit) → VotoEventKafkaSender.sendEvent()  [R14/R15 — AFTER_COMMIT]
+             → VotoMapper.toEvent()   [payload]
+             → kafkaTemplate.send("voto-topic", idSessao, evento)  [R14]
+                  → KafkaProducerInterceptor.onSend()  [header X-Correlation-Id]
 
 GET /sessoes/{id}/resultado
   SessaoController.apurar()
@@ -133,22 +143,30 @@ Observações:
    com a implementação atual.
 7. **Regra no domínio, relógio do banco (PF9 resolvido).** "A sessão está aberta?" é um método
    puro do domínio — `Sessao.isOpen(now)` → `now.isBefore(expiresAt)` — e o `now` vem sempre de
-   `SessaoRepository.now()` (`SELECT CURRENT_TIMESTAMP`, única autoridade de hora, comum a todas
-   as instâncias). A regra não mora mais em queries SQL (`isOpenById`/`findOpenIds` foram
-   removidas): `getOpenSessaoById`/`getClosedSessaoById` e a lista `getSessoesComStatus`
-(`findAll()` + um único `now()`, transportando `SessaoComStatus`) aplicam a mesma regra.
+   `TimeProvider.now()`, gateway do relógio do banco. A regra não mora mais em queries SQL
+   (`isOpenById`/`findOpenIds` foram removidas): `getOpenSessaoById`/`getClosedSessaoById` e a
+   lista `getSessoesComStatus` (`findAll()` + um único `now()`, transportando `SessaoComStatus`)
+    aplicam a mesma regra.
     Não há nenhum `LocalDateTime.now()` da JVM no fluxo; não há status persistido nem job de
     fechamento — o estado continua derivado somente de `expires_at`. Os motivos da escolha e os
     trade-offs estão em [decisao-relogio-da-sessao.md](decisao-relogio-da-sessao.md).
-8. **Janela de corrida no limite da expiração.** Entre a leitura do `now` do banco e a gravação
+8. **Autoridade de hora isolada no gateway `TimeProvider`.** O `now()` deixou de fazer parte de
+   `SessaoRepository` (o repositório não é a fonte do relógio) e passou a ser o gateway
+   `TimeProvider`, implementado por `JpaTimeProvider` — que abre uma própria `EntityManager` e
+   executa `SELECT CURRENT_TIMESTAMP` em **SQL nativo** (o `SELECT CURRENT_TIMESTAMP` em JPQL que
+   existia em `SpringDataSessaoRepository` foi removido). O relógio do banco continua sendo a
+   **única** autoridade de hora; a mudança é de **organização**, não de comportamento. O mesmo
+   gateway fornece o `publishedAt` da notificação de voto (`VotoService.votar()`), de modo que a
+   notificação e a sessão compartilham o mesmo referencial de tempo.
+9. **Janela de corrida no limite da expiração.** Entre a leitura do `now` do banco e a gravação
    do voto existe uma janela de poucos milissegundos em que um voto pode ser gravado logo após a
    expiração ter sido "vista" como aberta. É residual e pré-existente; a constraint
    `uk_voto_sessao_documento` não tem relação com o tempo.
-9. **Resultado sem votos = `SEM_VOTOS` (PF10 resolvido).** `ResultadoVotacao.status()` retorna
-   `SEM_VOTOS` quando `totalVotos() == 0`, antes da comparação de maioria. `EMPATE` passa a
-   significar apenas empate real com ao menos um voto registrado. Coberto por
-   `ResultadoVotacaoTest`.
-10. **Validação externa de CPF (R9).** `VotoService.votar()` consulta o gateway
+10. **Resultado sem votos = `SEM_VOTOS` (PF10 resolvido).** `ResultadoVotacao.status()` retorna
+    `SEM_VOTOS` quando `totalVotos() == 0`, antes da comparação de maioria. `EMPATE` passa a
+    significar apenas empate real com ao menos um voto registrado. Coberto por
+    `ResultadoVotacaoTest`.
+11. **Validação externa de CPF (R9/R16).** `VotoService.votar()` consulta o gateway
     `DocumentoValidator` — implementado por `DocumentoValidatorClient`, integração **fictícia**
     via `https://httpbin.org` (`GET /status/200,400,404,500` sorteia o status) — com o CPF já
     normalizado (`formatter.unformat`, Caelum Stella), **após** a sessão ser confirmada como
@@ -158,7 +176,12 @@ Observações:
     500 ms e URL configuráveis em `app.documento-validator.*`
     (`DocumentoValidatorConfig`/`DocumentoValidatorProperties`). Como a simulação é aleatória e
     não há base real de associados, PF12 (titularidade) segue em aberto.
-11. **Correlação de logs e do corpo de erro por requisição (PF13 resolvido).**
+    A flag `app.documento-validator.is-enabled` (padrão `false`) desliga a **integração externa
+    por completo**: `DocumentoValidatorClient.isValidDocumento()` retorna `true` imediatamente,
+    **sem executar** `GET /status/200,400,404,500` nem `POST /anything`. Com a validação desligada
+    não há requisição externa e, portanto, **não há falha de integração gerando 503** — o
+    `POST /votos` funciona sem acesso à internet (PF17 resolvido).
+12. **Correlação de logs e do corpo de erro por requisição (PF13 resolvido).**
     `MDCRequestFilter` (`com.votacao.entrypoint.filter`, `@Order(Ordered.HIGHEST_PRECEDENCE)`) lê o
     header `X-Correlation-Id` (ou gera UUID), **ecoa a header `X-Correlation-Id` na resposta** e
     popula o MDC com `correlationId`, `requestMethod` e `requestURI`; no `finally` **remove as
@@ -169,3 +192,36 @@ Observações:
     mesmo id. O `GlobalExceptionHandler` lê `MDC.get("correlationId")` ao montar o `ApiError`,
     expondo o campo **`correlation_id`** no corpo de erro. O `correlationId` é **gerado manualmente**
     (MDC); em branches futuros será migrado para o tracing do Spring Boot (Micrometer).
+13. **Notificação de voto em Kafka (R14/R15).** `VotoService.votar()` publica um `VotoPublishData`
+    (pauta, sessão, voto, `publishedAt`) através do gateway `VotoEventPublishGateway` —
+    implementado por `EventPublisherAdapter`, que faz a ponte para o `ApplicationEventPublisher` do
+    Spring. `VotoEventKafkaSender` (@`TransactionalEventListener(AFTER_COMMIT)`) transforma o
+    registro em `VotoEvent` (`VotoMapper.toEvent()`, MapStruct) e o envia ao tópico **`voto-topic`**
+    com a **chave = `idSessao`**, o que faz com que os votos de uma sessão cheguem ao consumidor
+    em ordem (mesma partição).
+    O produtor é montado em `KafkaConfig` (`DefaultKafkaProducerFactory` + `StringSerializer` +
+    `JacksonJsonSerializer` com o `JsonMapper` gerenciado pelo Spring — que herda
+    `spring.jackson.property-naming-strategy=SNAKE_CASE`). A **falha** no envio é registrada em log
+    (`ERROR`) e **não** desfaz o voto (PF15); uma **exceção síncrona** no envio, por ocorrer
+    **após o commit**, é capturada pela **aplicação** (`try/catch` em `VotoEventKafkaSender`) e
+    registrada em log `ERROR` com `idVoto`, `idSessao` e `correlationId`, **sem chegar ao
+    chamador** — a API responde **201** e a notificação é perdida, mas **diagnosticável**
+    (PF16 resolvido).
+14. **Header de correlação na mensagem Kafka.** `KafkaProducerInterceptor` (implementa
+    `ProducerInterceptor<String, VotoEvent>`) anexa o header **`X-Correlation-Id`** à mensagem,
+    copiando o valor do MDC (`MDC.get(MDC_CORRELATION_ID_KEY)`) — o mesmo id da requisição que
+    registrou o voto, o mesmo exposto no corpo de erro da API. Como o MDC é thread-local e a
+    publicação ocorre na thread da requisição, o valor está disponível; fora do ciclo de uma
+    requisição HTTP o valor é `null` (ou em branco) — nesse caso o interceptor **não anexa** o
+    header, registra um `WARN` e **não interrompe** a publicação (PF16 resolvido: antes
+    `MDC.get(...).getBytes(UTF_8)` era chamado sem guarda nula e lançava `NullPointerException`).
+15. **Falha síncrona da notificação tratada pela aplicação (PF16 resolvido).**
+    `VotoEventKafkaSender.sendEvent()` envolve o `kafkaTemplate.send(...)` em
+    `try/catch (RuntimeException)`: a exceção **não sobe** para o
+    `TransactionSynchronizationUtils.invokeAfterCompletion` do Spring e é registrada em log
+    `ERROR` com o contexto do voto (`idVoto`, `idSessao` e `correlationId` — capturado do MDC no
+    momento do envio, já que o `whenComplete` assíncrono roda em outra thread). O produtor tem
+    **tempo de bloqueio limitado** (`spring.kafka.producer.properties.max.block.ms=5000`,
+    `request.timeout.ms=10000`, `delivery.timeout.ms=30000`): com o broker inalcançável, a thread
+    da requisição é bloqueada por **até ~5 s** (e não os 60 s do padrão do Kafka). O contrato da
+    API **não muda**: o voto está commitado, portanto a resposta continua **201**.
