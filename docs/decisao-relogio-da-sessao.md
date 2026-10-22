@@ -88,13 +88,23 @@ public boolean isOpen(LocalDateTime now) {
 }
 
 // serviço — o "agora" vem do banco, não da JVM
-if (!sessao.isOpen(sessaoRepository.now())) {
+if (!sessao.isOpen(timeProvider.now())) {
     throw new SessaoIsClosedException(sessaoId);
 }
 ```
 
 A regra permanece **única e visível no domínio** (não há regra de negócio dentro de queries SQL),
 e a fonte de hora é **única** (o banco, compartilhada por todas as instâncias).
+
+> **Nota de evolução (branch `feat/envia-notificacao-voto`).** O acesso ao relógio foi isolado
+> em um gateway próprio, `TimeProvider` (`application/gateway/TimeProvider.java`), implementado
+> por `JpaTimeProvider` (`entrypoint/persistence/JpaTimeProvider.java`) — que executa
+> `SELECT CURRENT_TIMESTAMP` em **SQL nativo**. O método `now()` foi removido de
+> `SessaoRepository` e de `SpringDataSessaoRepository`: um repositório de entidades não é a
+> fonte do relógio. A **decisão** (relógio do banco como única autoridade de hora, regra no
+> domínio) permanece **inalterada** — mudou apenas onde a hora é obtida. O mesmo gateway
+> passou a fornecer o `publishedAt` da notificação de voto, de modo que sessão e notificação
+> compartilham o mesmo referencial de tempo.
 
 ## 4. Alternativas consideradas
 
@@ -104,13 +114,13 @@ e a fonte de hora é **única** (o banco, compartilhada por todas as instâncias
 | **PF9 (SQL)** — decisão no banco (`isOpenById`, `findOpenIds`) | borda decidida por queries no banco | Consenso total e atômico                      | Regra de negócio escondida em SQL, fora do domínio; difícil de testar sem banco. | Descartada         |
 | **Clock bean** — `java.time.Clock` injetado   | regra no domínio, hora da JVM (bean) | Testável com relógio fixo                     | **É o relógio da JVM**: devolve a divergência entre pods/instâncias (o problema original). | Descartada         |
 | **ClockRepository** dedicado                  | interface própria só para o `now()`                          | Semântica limpa (hora ≠ sessão)              | 3+ arquivos novos para um único `SELECT CURRENT_TIMESTAMP` da JVM — over-engineering. | Descartada         |
-| **Escrita atômica no banco** (check + insert em uma única instrução) | elimina a janela check→insert | Elimina todo resíduo de corrida              | Complexidade alta (funcões/locks/transações especiais) para um risco desprezível. | Descartada         |
-| **Escolhida** — regra no domínio + `SessaoRepository.now()` | `sessao.isOpen(sessaoRepository.now())` | Regra única e visível; hora única; custo mínimo | Uma consulta "extra" por operação (ver §6). Uma janela residual de ms entre ler a hora e gravar o voto (ver §7). | **Adotada**        |
+| **Escrita atômica no banco** (check + insert em uma única instrução) | elimina a janela check→insert | Elimina todo resíduo de corrida              | Complexidade alta (funções/locks/transações especiais) para um risco desprezível. | Descartada         |
+| **Escolhida** — regra no domínio + relógio do banco | `sessao.isOpen(timeProvider.now())` | Regra única e visível; hora única; custo mínimo | Uma consulta "extra" por operação (ver §6). Uma janela residual de ms entre ler a hora e gravar o voto (ver §7). | **Adotada**        |
 
 **Por que não o Clock bean?** ele atacaria o *sintoma errado*: injetar um `Clock` melhora apenas a
 testabilidade, mas continua sendo o relógio da JVM — ou seja, traz de volta exatamente a
 divergência entre instâncias que motivou o PF9. A testabilidade já é obtida sem bean, pois os
-testes de serviço congelam o tempo através do stub de `SessaoRepository.now()`.
+testes de serviço congelam o tempo através do stub do gateway `TimeProvider`.
 
 ## 5. Trade-offs assumidos
 
