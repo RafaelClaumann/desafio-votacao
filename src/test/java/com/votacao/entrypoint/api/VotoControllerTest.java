@@ -52,13 +52,13 @@ class VotoControllerTest {
     @DisplayName("Should create the voto with the full response body when the input is valid")
     void save_shouldCreateVoto_whenInputIsValid() throws Exception {
         LocalDateTime now = LocalDateTime.now();
-        Pauta pauta = new Pauta(1L, TITULO, 10L);
+        Pauta pauta = new Pauta(1L, TITULO, 10L, now);
         Sessao sessao = new Sessao(1L, pauta, now, now.plusMinutes(10));
-        Voto saved = new Voto(1L, sessao, DOCUMENTO_VALIDO, Voto.Escolha.SIM);
+        Voto saved = new Voto(1L, sessao, DOCUMENTO_VALIDO, Voto.Escolha.SIM, now);
 
         when(service.votar(1L, DOCUMENTO_VALIDO, Voto.Escolha.SIM)).thenReturn(saved);
         when(mapper.toResponse(any(Voto.class)))
-                .thenReturn(new VotoResponseDTO(1L, 1L, 1L, TITULO, DOCUMENTO_VALIDO, Voto.Escolha.SIM, now, now.plusMinutes(10)));
+                .thenReturn(new VotoResponseDTO(1L, 1L, 1L, TITULO, DOCUMENTO_VALIDO, Voto.Escolha.SIM, now, now.plusMinutes(10), now));
 
         mockMvc.perform(post("/votos")
                         .contentType(MediaType.APPLICATION_JSON)

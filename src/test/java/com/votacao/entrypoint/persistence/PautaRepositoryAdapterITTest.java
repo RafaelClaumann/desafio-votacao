@@ -10,6 +10,7 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,7 +32,9 @@ class PautaRepositoryAdapterITTest {
     @DisplayName("save should return the pauta with a generated id")
     void save_shouldReturnPautaWithGeneratedId() {
         String title = "Discuss the new voting rules";
-        Pauta pauta = new Pauta(null, title, 10L);
+        long tempoVotacaoMinutos = 10L;
+        LocalDateTime createdAt = LocalDateTime.now();
+        Pauta pauta = new Pauta(null, title, tempoVotacaoMinutos, createdAt);
 
         Pauta saved = adapter.save(pauta);
 
@@ -44,8 +47,10 @@ class PautaRepositoryAdapterITTest {
     @Test
     @DisplayName("getPautas should return the saved pautas")
     void getPautas_shouldReturnPautas() {
-        Pauta saved00 = adapter.save(new Pauta(null, "[00] Discuss the new voting rules", 10L));
-        Pauta saved01 = adapter.save(new Pauta(null, "[01] Discuss the new voting rules", 10L));
+        long tempoVotacaoMinutos = 10L;
+        LocalDateTime createdAt = LocalDateTime.now();
+        Pauta saved00 = adapter.save(new Pauta(null, "[00] Discuss the new voting rules", tempoVotacaoMinutos, createdAt));
+        Pauta saved01 = adapter.save(new Pauta(null, "[01] Discuss the new voting rules", tempoVotacaoMinutos, createdAt));
 
         List<Pauta> pautas = adapter.getPautas();
 
@@ -58,12 +63,14 @@ class PautaRepositoryAdapterITTest {
     @DisplayName("save should reject a title that differs only by case")
     void save_shouldReject_whenTitleDiffersOnlyByCase() {
         String title = "Discuss the new voting rules";
+        long tempoVotacaoMinutos = 10L;
+        LocalDateTime createdAt = LocalDateTime.now();
 
-        adapter.save(new Pauta(null, title, 10L));
+        adapter.save(new Pauta(null, title, tempoVotacaoMinutos, createdAt));
 
         DuplicatedPautaException exception = assertThrows(
                 DuplicatedPautaException.class,
-                () -> adapter.save(new Pauta(null, title.toLowerCase(), 10L))
+                () -> adapter.save(new Pauta(null, title.toLowerCase(), tempoVotacaoMinutos, null))
         );
 
         assertEquals("Já existe uma pauta com o título: " + title.toLowerCase(), exception.getMessage());

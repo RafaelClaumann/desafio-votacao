@@ -50,13 +50,13 @@ class SessaoServiceTest {
     private SessaoService sessaoService;
 
     private static final LocalDateTime BASE_DATE_TIME = LocalDateTime.of(2026, 9, 23, 10, 0);
-    private static final Pauta PAUTA = new Pauta(2L, "Reforma estatutária do capítulo quatro", 10L);
+    private static final Pauta PAUTA = new Pauta(2L, "Reforma estatutária do capítulo quatro", 10L, null);
 
     @Test
     @DisplayName("saveSessao should create and save a session with the pauta duration")
     void saveSessao_shouldCreateAndSaveSessionWithPautaDuration() {
         long idPauta = 1L;
-        Pauta pauta = new Pauta(idPauta, "Reforma estatutária do capítulo quatro", 10L);
+        Pauta pauta = new Pauta(idPauta, "Reforma estatutária do capítulo quatro", 10L, BASE_DATE_TIME);
         LocalDateTime now = LocalDateTime.of(2026, 9, 23, 10, 0);
 
         when(pautaService.getPautaById(idPauta)).thenReturn(pauta);
@@ -102,7 +102,7 @@ class SessaoServiceTest {
     @DisplayName("saveSessao should throw DuplicatedSessaoException when the pauta already has a session")
     void saveSessao_shouldThrowWhenSessionAlreadyExistsForPauta() {
         long idPauta = 1L;
-        Pauta pauta = new Pauta(idPauta, "Reforma estatutária do capítulo quatro", 10L);
+        Pauta pauta = new Pauta(idPauta, "Reforma estatutária do capítulo quatro", 10L, BASE_DATE_TIME);
 
         when(pautaService.getPautaById(idPauta)).thenReturn(pauta);
         when(sessaoRepository.existsByIdPauta(idPauta)).thenReturn(true);

@@ -15,6 +15,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDateTime;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -42,12 +44,13 @@ class PautaControllerTest {
     @Test
     @DisplayName("Should create the pauta when the duration is positive")
     void save_shouldCreatePauta_whenDurationIsPositive() throws Exception {
-        Pauta domain = new Pauta(null, TITULO, 10L);
-        Pauta saved = new Pauta(1L, TITULO, 10L);
+        LocalDateTime createdAt = LocalDateTime.now();
+        Pauta domain = new Pauta(null, TITULO, 10L, createdAt);
+        Pauta saved = new Pauta(1L, TITULO, 10L, createdAt);
 
         when(mapper.toDomain(any(PautaRequestDTO.class))).thenReturn(domain);
         when(service.savePauta(any())).thenReturn(saved);
-        when(mapper.toResponse(any())).thenReturn(new PautaResponseDTO(1L, TITULO, 10L));
+        when(mapper.toResponse(any())).thenReturn(new PautaResponseDTO(1L, TITULO, 10L, createdAt));
 
         mockMvc.perform(post("/pautas")
                         .contentType(MediaType.APPLICATION_JSON)

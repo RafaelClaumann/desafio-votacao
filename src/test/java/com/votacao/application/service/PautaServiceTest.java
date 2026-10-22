@@ -11,6 +11,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,8 +33,9 @@ class PautaServiceTest {
     @Test
     @DisplayName("savePauta should save the pauta when the title is unique")
     void savePauta_shouldCreatePauta_whenTitleIsUnique() {
-        Pauta pauta = new Pauta(null, "Reforma estatutária do capítulo quatro", 10L);
-        Pauta saved = new Pauta(1L, pauta.titulo(), pauta.tempoVotacaoMinutos());
+        LocalDateTime now = LocalDateTime.now();
+        Pauta pauta = new Pauta(null, "Reforma estatutária do capítulo quatro", 10L, null);
+        Pauta saved = new Pauta(1L, pauta.titulo(), pauta.tempoVotacaoMinutos(), now);
 
         when(repository.existsByTituloIgnoreCase(pauta.titulo())).thenReturn(false);
         when(repository.save(pauta)).thenReturn(saved);
@@ -47,7 +50,7 @@ class PautaServiceTest {
     @Test
     @DisplayName("savePauta should throw DuplicatedPautaException when the title already exists ignoring case")
     void savePauta_shouldThrow_whenTitleAlreadyExistsIgnoringCase() {
-        Pauta pauta = new Pauta(null, "reforma estatutária do capítulo quatro", 10L);
+        Pauta pauta = new Pauta(null, "reforma estatutária do capítulo quatro", 10L, null);
 
         when(repository.existsByTituloIgnoreCase(pauta.titulo())).thenReturn(true);
 
@@ -63,7 +66,7 @@ class PautaServiceTest {
     @Test
     @DisplayName("savePauta should throw DuplicatedPautaException when the repository rejects the title")
     void savePauta_shouldThrow_whenRepositoryRejectsTitle() {
-        Pauta pauta = new Pauta(null, "Reforma estatutária do capítulo quatro", 10L);
+        Pauta pauta = new Pauta(null, "Reforma estatutária do capítulo quatro", 10L, null);
 
         when(repository.existsByTituloIgnoreCase(pauta.titulo())).thenReturn(false);
         when(repository.save(pauta)).thenThrow(new DuplicatedPautaException(pauta.titulo()));
@@ -79,7 +82,7 @@ class PautaServiceTest {
     @Test
     @DisplayName("getPautaById should throw PautaNotFoundException when the pauta does not exist")
     void getPautaById_shouldThrow_whenPautaDoesNotExist() {
-        Long idPauta = 1L;
+        long idPauta = 1L;
 
         when(repository.findById(idPauta)).thenReturn(java.util.Optional.empty());
 
