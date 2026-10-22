@@ -1,5 +1,6 @@
 package com.votacao.entrypoint.client.documentvalidator;
 
+import com.votacao.config.DocumentoValidatorProperties;
 import com.votacao.entrypoint.client.exception.HttpIntegrationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -9,7 +10,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
@@ -27,18 +27,20 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 @DisplayName("DocumentoValidatorClient")
 class DocumentoValidatorClientTest {
 
+    private static final String BASE_URL = "https://httpbin.org";
     private static final String STATUS_ENDPOINT = "https://httpbin.org/status/200,400,404,500";
     private static final String ANYTHING_ENDPOINT = "https://httpbin.org/anything";
+    private static final String DOCUMENTO = "12345678909";
 
+    private RestClient.Builder builder;
     private MockRestServiceServer server;
     private DocumentoValidatorClient client;
 
     @BeforeEach
     void setUp() {
-        RestClient.Builder builder = RestClient.builder();
+        builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
-        client = new DocumentoValidatorClient(builder.baseUrl("https://httpbin.org").build());
-        ReflectionTestUtils.setField(client, "isValidationEnabled", true);
+        client = clientWithValidationEnabled(true);
     }
 
     @ParameterizedTest(name = "status {0} should make the documento {1}")
@@ -55,7 +57,7 @@ class DocumentoValidatorClientTest {
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withStatus(status));
 
-        boolean isValid = client.isValidDocumento("12345678909");
+        boolean isValid = client.isValidDocumento(DOCUMENTO);
 
         if ("VALID".equals(expectedOutcome)) {
             assertTrue(isValid);
@@ -78,7 +80,7 @@ class DocumentoValidatorClientTest {
                         MediaType.APPLICATION_JSON
                 ));
 
-        assertTrue(client.isValidDocumento("12345678909"));
+        assertTrue(client.isValidDocumento(DOCUMENTO));
         server.verify();
     }
 
@@ -89,7 +91,7 @@ class DocumentoValidatorClientTest {
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
 
-        assertThrows(HttpIntegrationException.class, () -> client.isValidDocumento("12345678909"));
+        assertThrows(HttpIntegrationException.class, () -> client.isValidDocumento(DOCUMENTO));
         server.verify();
     }
 
@@ -100,8 +102,31 @@ class DocumentoValidatorClientTest {
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withException(new IOException("connection refused")));
 
-        assertThrows(HttpIntegrationException.class, () -> client.isValidDocumento("12345678909"));
+        assertThrows(HttpIntegrationException.class, () -> client.isValidDocumento(DOCUMENTO));
         server.verify();
+    }
+
+    @Test
+    @DisplayName("should accept the documento without calling the external service when validation is disabled")
+    void isValidDocumento_shouldAcceptWithoutCallingExternalService_whenValidationIsDisabled() {
+        DocumentoValidatorClient disabledClient = clientWithValidationEnabled(false);
+
+        assertTrue(disabledClient.isValidDocumento(DOCUMENTO));
+        server.verify();
+    }
+
+    @Test
+    @DisplayName("should not fail when the external service is unreachable and validation is disabled")
+    void isValidDocumento_shouldNotThrowHttpIntegrationException_whenValidationIsDisabledAndServiceIsUnreachable() {
+        DocumentoValidatorClient disabledClient = clientWithValidationEnabled(false);
+
+        assertTrue(disabledClient.isValidDocumento(DOCUMENTO));
+        server.verify();
+    }
+
+    private DocumentoValidatorClient clientWithValidationEnabled(boolean isEnabled) {
+        DocumentoValidatorProperties properties = new DocumentoValidatorProperties(BASE_URL, 500, 500, isEnabled);
+        return new DocumentoValidatorClient(builder.baseUrl(BASE_URL).build(), properties);
     }
 
 }

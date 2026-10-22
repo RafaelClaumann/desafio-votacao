@@ -1,10 +1,10 @@
 package com.votacao.entrypoint.client.documentvalidator;
 
 import com.votacao.application.gateway.DocumentoValidator;
+import com.votacao.config.DocumentoValidatorProperties;
 import com.votacao.entrypoint.client.exception.HttpIntegrationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -20,21 +20,26 @@ public class DocumentoValidatorClient implements DocumentoValidator {
 
     private static final Logger log = LoggerFactory.getLogger(DocumentoValidatorClient.class);
 
-    @Value("${app.documento-validator.is-enabled}")
-    private boolean isValidationEnabled;
-
     private final RestClient restClient;
+    private final boolean isValidationEnabled;
 
-    public DocumentoValidatorClient(RestClient documentoValidatorRestClient) {
+    public DocumentoValidatorClient(
+            RestClient documentoValidatorRestClient,
+            DocumentoValidatorProperties properties
+    ) {
         this.restClient = documentoValidatorRestClient;
+        this.isValidationEnabled = properties.isEnabled();
     }
 
     @Override
     public boolean isValidDocumento(String documento) {
+        if (!isValidationEnabled) {
+            log.debug("Validação externa de documento desabilitada: documento aceito sem consultar o serviço externo");
+            return true;
+        }
+
         try {
-            if (isValidationEnabled) {
-                simularStatusDoServicoExterno();
-            }
+            simularStatusDoServicoExterno();
 
             ResponseEntity<ValidatorResponse> response = restClient.post()
                     .uri("/anything")
