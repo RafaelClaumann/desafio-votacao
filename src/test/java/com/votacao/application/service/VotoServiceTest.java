@@ -60,7 +60,8 @@ class VotoServiceTest {
     private static final String DOCUMENTO_NORMALIZADO = "12345678909";
     private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 10, 3, 10, 0, 0);
 
-    private static final Pauta PAUTA = new Pauta(1L, "Reforma estatutária do capítulo quatro", 10L);
+
+    private static final Pauta PAUTA = new Pauta(1L, "Reforma estatutária do capítulo quatro", 10L, FIXED_NOW);
     private static final Sessao SESSAO = new Sessao(ID_SESSAO, PAUTA, FIXED_NOW, FIXED_NOW.plusMinutes(9));
 
     @BeforeEach
@@ -82,7 +83,8 @@ class VotoServiceTest {
                     1L,
                     argument.sessao(),
                     argument.documento(),
-                    argument.escolhaVoto()
+                    argument.escolhaVoto(),
+                    FIXED_NOW
             );
         });
         when(timeProvider.now()).thenReturn(FIXED_NOW);
@@ -108,7 +110,8 @@ class VotoServiceTest {
                     1L,
                     argument.sessao(),
                     argument.documento(),
-                    argument.escolhaVoto()
+                    argument.escolhaVoto(),
+                    FIXED_NOW
             );
         });
         when(timeProvider.now()).thenReturn(FIXED_NOW);
@@ -138,7 +141,8 @@ class VotoServiceTest {
                     1L,
                     argument.sessao(),
                     argument.documento(),
-                    argument.escolhaVoto()
+                    argument.escolhaVoto(),
+                    FIXED_NOW
             );
         });
         when(timeProvider.now()).thenReturn(FIXED_NOW);

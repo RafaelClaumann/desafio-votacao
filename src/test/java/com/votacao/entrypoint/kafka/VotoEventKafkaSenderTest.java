@@ -40,6 +40,7 @@ class VotoEventKafkaSenderTest {
 
     private static final String TOPIC = "voto-topic";
     private static final String DOCUMENTO = "12345678909";
+    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 10, 3, 10, 0, 0);
 
     @Mock
     private KafkaTemplate<String, VotoEvent> kafkaTemplate;
@@ -136,9 +137,9 @@ class VotoEventKafkaSenderTest {
 
     private VotoPublishData publishData() {
         LocalDateTime now = LocalDateTime.of(2026, 9, 23, 10, 0);
-        Pauta pauta = new Pauta(1L, "Reforma estatutária do capítulo quatro", 10L);
+        Pauta pauta = new Pauta(1L, "Reforma estatutária do capítulo quatro", 10L, FIXED_NOW);
         Sessao sessao = new Sessao(1L, pauta, now, now.plusMinutes(10));
-        Voto voto = new Voto(1L, sessao, DOCUMENTO, Voto.Escolha.SIM);
+        Voto voto = new Voto(1L, sessao, DOCUMENTO, Voto.Escolha.SIM, FIXED_NOW);
 
         return new VotoPublishData(pauta, sessao, voto, now.plusSeconds(1));
     }
