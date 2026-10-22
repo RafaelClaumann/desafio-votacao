@@ -47,6 +47,31 @@ FECHADA   (terminal)
 - **Resultado**: não é um estado — é um valor calculado (SEM_VOTOS, APROVADA, REJEITADA,
   EMPATE) a partir da contagem de votos de uma sessão fechada.
 
+## Ciclo de vida da notificação de voto
+
+A notificação de voto (R14/R15) tem um ciclo curto, fora da transação do voto:
+
+```
+VOTO GRAVADO (commit confirmado)
+   │
+   ├─ (falha no envio) ──▶ NOTIFICAÇÃO PERDIDA ──▶ [registro apenas em log]
+   │
+   ▼
+NOTIFICAÇÃO PUBLICADA em `voto-topic`
+```
+
+| Item | Descrição |
+| ---- | --------- |
+| Estado inicial | Não existe — a notificação só é criada a partir de um voto gravado. |
+| Entrada em PUBLICADA | Ocorre **após o commit** da transação do voto (`TransactionPhase.AFTER_COMMIT`). |
+| Transição para PERDIDA | Falha no envio ao broker (broker indisponível, timeout, erro de serialização) ou **exceção síncrona** no envio — capturada pela aplicação e registrada em log `ERROR` com `idVoto`, `idSessao` e `correlationId`, sem chegar ao chamador (PF16 resolvido). Não há retentativa. |
+| Retorno de PERDIDA para PUBLICADA | Não existe. |
+| Terminal | **PUBLICADA** e **PERDIDA** são terminais; o voto registrado **nunca** é desfeito por causa da notificação. |
+
+> O estado "notificação pendente" é efêmero: entre o commit e a tentativa de envio, a notificação
+> só existe na memória da aplicação. Não há **outbox** nem persistência da notificação
+> (ver [PF15](pontos-fracos-e-falhas.md#pf15)).
+
 ## Invariantes de Negócio
 
 Condições que **sempre devem ser verdadeiras**. Se violadas, o sistema recusa a operação
@@ -63,8 +88,10 @@ ou o banco impede a gravação.
 | I7 | Votos só existem vinculados a uma sessão existente.                         | FK `votos.sessao_id → sessoes.id`.                                                                                      | Voto recusado (400), pois a sessão é validada antes.              |
 | I8 | No máximo um voto por (sessão, documento).                                  | Verificação em `VotoService` + constraint única `UNIQUE(sessao_id, documento)`.                                         | Voto recusado (409).                                              |
 | I9 | Todo voto é SIM ou NÃO.                                                     | Enum `Voto.Escolha`.                                                                                                    | Requisição recusada (400) na desserialização.                     |
-| I10 | Sessão fechada nunca volta a aceitar votos.                                 | `Sessao.isOpen(now)` (regra no domínio) com `now` de `SessaoRepository.now()`, a cada operação.                            | Votos rejeitados (400); não há mecanismo de reabertura.           |
+| I10 | Sessão fechada nunca volta a aceitar votos.                                 | `Sessao.isOpen(now)` (regra no domínio) com `now` de `TimeProvider.now()`, a cada operação.                             | Votos rejeitados (400); não há mecanismo de reabertura.           |
 | I11 | O resultado de uma sessão aberta nunca é divulgado.                         | `SessaoService.getClosedSessaoById()` antes da apuração.                                                                | Apuração recusada (400) enquanto aberta.                          |
+| I12 | Uma notificação de voto só é publicada para um voto **já confirmado** no banco. | `VotoEventKafkaSender` com `@TransactionalEventListener(phase = AFTER_COMMIT)`.                                          | Transação revertida → **nenhuma** notificação é publicada.        |
+| I13 | A falha da notificação **não** desfaz o voto registrado **nem** altera a resposta da API. | Envio fora da transação; a falha assíncrona é registrada em log (`ERROR`) e a exceção síncrona é capturada pelo Spring (`TransactionSynchronizationUtils.invokeAfterCompletion`). | Voto permanece registrado e apurável; a API responde **201**. |
 
 ## Condições sempre válidas na criação
 
@@ -73,3 +100,5 @@ ou o banco impede a gravação.
 - A duração da pauta está sempre no intervalo **1 a 43200 minutos** (validação `@Positive` +
   `@Max(43200)` no `PautaRequestDTO`), portanto `expiresAt` nunca excede o intervalo
   representável pelo `LocalDateTime`.
+- `publishedAt` da notificação de voto = instante colhido do **relógio do banco** no momento do
+  registro do voto (mesma autoridade de hora usada para o estado da sessão).

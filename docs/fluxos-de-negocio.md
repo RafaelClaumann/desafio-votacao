@@ -48,16 +48,27 @@ Objetivo: registrar a manifestação de um associado em uma sessão aberta.
 4. O sistema verifica se a **sessão está aberta** (pelo relógio do banco, a expiração ainda
    não foi alcançada).
 5. O sistema consulta o **validador externo de CPF** (integração fictícia/aleatória) com o
-   documento normalizado; documento rejeitado encerra o fluxo (HTTP 400).
+   documento normalizado; documento rejeitado encerra o fluxo (HTTP 400). **Com a validação externa
+   desligada (`app.documento-validator.is-enabled=false`, padrão) esta consulta não é executada** —
+   o documento é aceito com base apenas no formato (`@CPF`).
 6. O sistema verifica se o **mesmo CPF já votou nesta sessão**.
 7. O voto é persistido (o banco reforça a unicidade por sessão/documento).
-8. O voto passa a integrar a apuração futura da sessão.
+8. O sistema prepara a **notificação do voto** (pauta, sessão, voto gravado e o instante de
+   publicação, colhido do relógio do banco) e a publica como evento da aplicação.
+9. A transação é **confirmada**; só então a notificação é enviada ao tópico Kafka
+   `voto-topic` (ver [Fluxo 6](#fluxo-6--notificar-o-voto-registrado-kafka)).
+10. O voto passa a integrar a apuração futura da sessão.
 
 Resultado: voto registrado (HTTP 201).
 
 Rejeições possíveis: sessão inexistente (400) · sessão fechada (400) · CPF/sessão/escolha
-inválidos (400) · CPF rejeitado pelo validador externo (400) · CPF já votou nesta sessão (409) ·
-falha no serviço externo de validação (503).
+inválidos (400) · CPF rejeitado pelo validador externo (400, apenas com a validação externa
+habilitada) · CPF já votou nesta sessão (409) · falha no serviço externo de validação (503,
+apenas com a validação externa habilitada).
+
+> A notificação do passo 9 é **best-effort**: se o broker estiver indisponível, a falha é
+> registrada em log e o **voto permanece registrado** — a resposta ao associado continua sendo
+> **201**.
 
 ---
 
@@ -93,3 +104,41 @@ Objetivo: visualizar as pautas e sessões existentes.
    consulta (calculado pelo relógio do banco, consistente para todas as instâncias).
 
 Não há restrição de negócio para consulta — são listas simples de leitura.
+
+---
+
+## Fluxo 6 — Notificar o Voto Registrado (Kafka)
+
+Objetivo: avisar os sistemas consumidores que um voto foi registrado, para que acompanhem a
+apuração sem consultar a API.
+
+1. O **Fluxo 3** grava o voto e publica, dentro da transação, um evento de aplicação com a
+   **notificação**: pauta, sessão, voto gravado e o instante de publicação (`published_at`,
+   colhido do relógio do banco).
+2. A transação do voto é **confirmada** (`commit`). Somente agora o evento é consumido pelo
+   listener — se a transação for revertida, **nada é publicado**.
+3. O listener converte a notificação no **payload** de Kafka (`VotoEvent`), convertendo os
+   instantes para `ISO_LOCAL_DATE_TIME` e o enum de escolha para `SIM`/`NAO`.
+4. O produtor anexa o header **`X-Correlation-Id`** com o identificador de correlação da
+   requisição que registrou o voto.
+5. A mensagem é publicada no tópico **`voto-topic`**, com a **chave = identificador da sessão**
+   (todos os votos de uma sessão vão para a mesma partição, preservando a ordem).
+6. O resultado do envio é registrado em log: sucesso (`INFO` — id do voto, timestamp e partição)
+   ou falha (`ERROR`).
+
+Resultado: mensagem publicada em `voto-topic`, disponível para os consumidores do tópico.
+
+Falhas possíveis:
+
+- **Broker indisponível** — a falha é registrada em log (`ERROR` — "Failed to send message:
+  idVoto=…, idSessao=…, correlationId=…"). O **voto permanece registrado** e a resposta da API ao
+  associado **não** é afetada.
+- **Exceção síncrona no envio** (por exemplo, tempo limite do produtor aguardando metadados do
+  broker) — a exceção é lançada **após o commit** e **capturada pela aplicação**, que a registra
+  em log `ERROR` **com o contexto do voto** (`idVoto`, `idSessao`, `correlationId`) **sem
+  propagá-la ao chamador**: a API responde **HTTP 201**, com o voto **gravado** e a notificação
+  **perdida, mas com rastro em log**. O tempo de espera do produtor é limitado a ~5 s
+  (`max.block.ms=5000`) (ver [PF16](pontos-fracos-e-falhas.md#pf16)).
+
+O contrato do evento (payload, headers, configuração do broker) está em
+[notificacao-voto-kafka.md](notificacao-voto-kafka.md).
